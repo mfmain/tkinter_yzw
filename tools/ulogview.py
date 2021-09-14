@@ -1,23 +1,30 @@
 # coding: gbk
 
-# pyinstaller -F -w --exclude numpy ulogd.py
+# pyinstaller -F -w --exclude numpy %
 
 import sys
 import time
 import queue
 import socket
 import threading
+import argparse
 import tkinter as tk
 from tkinter_yzw.tk_tree import TkYzwFrameTree
-import win32clipboard
-import win32con
 
 
-def clip_copy(msg):
-    win32clipboard.OpenClipboard()
-    win32clipboard.EmptyClipboard()
-    win32clipboard.SetClipboardData(win32con.CF_TEXT, msg.encode("gbk"))
-    win32clipboard.CloseClipboard()
+if sys.platform == 'win32':
+    import win32clipboard
+    import win32con
+
+
+    def clip_copy(msg):
+        win32clipboard.OpenClipboard()
+        win32clipboard.EmptyClipboard()
+        win32clipboard.SetClipboardData(win32con.CF_TEXT, msg.encode("gbk"))
+        win32clipboard.CloseClipboard()
+else:
+    def clip_copy(msg):
+        pass
 
 
 class MyGlobals():
@@ -53,7 +60,37 @@ def q_nonblock_polling(q):
             return a
 
 
-class ThreadUdp2Queue(threading.Thread):
+class ThreadInputFile(threading.Thread):
+    """ 从文件中读取,转发到queue """
+    def __init__(self, q:queue.Queue, fn:str, encoding="gbk", polltv=0.3):
+        threading.Thread.__init__(self)
+        self.daemon = True
+        self.q = q
+        self.fn = fn
+        self.file = open(fn, "rb")
+        self.encoding = encoding
+        self.polltv = polltv
+
+    def run(self):
+        fn = self.fn
+        file = self.file
+        encoding = self.encoding
+        polltv = self.polltv
+        line = b""
+        while True:
+            line_ = file.readline()
+            print("readline %r" % line_)
+            if line_:
+                line += line_
+                if line[-1] == 10:  # b"\n"
+                    print("q.put(%r)"%line)
+                    self.q.put((fn, line.decode(encoding)))
+                    line = b""
+                    continue
+            time.sleep(args.polltv)
+
+
+class ThreadInputUdp(threading.Thread):
     """ 接收UDP,转发到queue """
     def __init__(self, q:queue.Queue, host:str, port:int):
         threading.Thread.__init__(self)
@@ -73,10 +110,10 @@ class Ui:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("ulogd")
-        self.root.geometry('800x500+200+200') # yscroll=True时需要设，否则窗口很小
+        self.root.geometry('800x800+200+200') # yscroll=True时需要设，否则窗口很小
         fr = tk.Frame(self.root)
 
-        column_list = [("", 120), (",w", "100,w+")]
+        column_list = [("", 180), (",w", "100,w+")]
         ui_tree = TkYzwFrameTree(self.root, column_list, scroll="xy", height=10)
         # show="tree" 无抬头栏；  show="headings" 有抬头
         self.ui_tree = ui_tree
@@ -179,13 +216,32 @@ class Ui:
         self.root.after(100, self.on_timer)
 
 
-if len(sys.argv) < 2:
-    # print("Usage: %s listen_port" % sys.argv[0])
-    listen_port = 17878
-else:
-    listen_port = int(sys.argv[1])
+def _getopt():
+    argv = sys.argv[1:]
+    parser = argparse.ArgumentParser(description='ulogview')
+    parser.add_argument('-f', '--file', type=str, default="", help='load from logfile')
+    parser.add_argument('--file_encoding', type=str, default="gbk", help='load logfile encoding')
+    parser.add_argument('-u', '--udp', type=int, default=17878, help='listen on udp port')
+    parser.add_argument('-l', '--log', type=str, default="", help='write to logfile')
+    parser.add_argument('--log_encoding', type=str, default="gbk", help='write logfile encoding')
+    parser.add_argument('--polltv', type=float, default=0.3, help='write logfile encoding')
 
+    return parser.parse_args(argv)
+
+
+args = _getopt()
+print(args)
 g = MyGlobals()
-ThreadUdp2Queue(g.q, host="0.0.0.0", port=listen_port).start()
+if args.log:
+    log = open(args.log, "w", encoding=args.log_encoding)
+else:
+    log = None
+
+if args.file:
+    ThreadInputFile(g.q, fn=args.file, encoding=args.file_encoding).start()
+else:
+    ThreadInputUdp(g.q, host="0.0.0.0", port=args.udp).start()
+
+
 ui = Ui()
 ui.root.mainloop()
