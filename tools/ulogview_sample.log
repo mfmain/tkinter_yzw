@@ -1,0 +1,49 @@
+
+t ulogview.log
+
+RUsage/node A full node path is similar to file path in a file system: parentpaths/nodename
+RUsage/command content format of log files or udp messages
+RUsage/command/t t<title>: root node is the top parent of a certain source: a file or an udp connect, and you can identify them by giving it a title
+RUsage/command/r r<fullpath>: replace node <fullpath>, or insert it as the first node of its parent when it does not exist
+RUsage/command/R R<fullpath>: replace node <fullpath>, or insert it as the last  node of its parent when it does not exist
+RUsage/command/i r<parentpath>/<nodename>: insert <nodename> as the first node of <parentpath>
+RUsage/command/I I<parentpath>/<nodename>: insert <nodename> as the last  node of <parentpath>
+RUsage/command/note r/R is supposed to replace node while i/I is to insert, a slightly different in performance
+RUsage/keyboard/x x delete current tree
+RUsage/keyboard/X X clear whole window
+RUsage/notes/parent Parent nodes are added automatically, in the order of its first appear
+RUsage/notes/order Use R command to make the parent nodes in advance if you want them in a particular order
+
+rdemo_stat/cpu 8.0%
+rdemo_stat/mem 1.2G
+rdemo_stat/load 0.8
+rdemo_stat/proc/1185/net/tcph overwrite if exists else insert to the head of its parent
+Rdemo_stat/proc/1185/net/tcpt1 overwrite if exists else insert to the tail of its parent
+Rdemo_stat/proc/1185/net/tcpt2 overwrite if exists else insert to the tail of its parent
+
+Idemo_named/xxx yyy (1)insert node "yyy" as the last node of parent "demo/xxx"
+Idemo_named/xxx yyy2:nodetext2 (2)same as above, but display a specified text instead of node name
+idemo_named/xxx yyy3 (3)insert node xxx/yyy3 as the first node of parent "demo/xxx"
+idemo_named/xxx yyy3 (4)overwrite yyy3, a little slower than r/R command
+
+Rdemo_log/Anonymous  Anonymous nodes are automatically named and you cannot reference them(i.e. change them)
+Idemo_log/Anonymous :display_as specify a display text
+Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
+
+`easy_item(rootpath_+"Usage", tags=["h1", "blue"])
+`easy_item(rootpath_+"demo_log", tags=["h1", "blue"])
+
+`easy_insert(rootpath_+"demo_named/xxx", "myiid1", index="end", text="mytext1", values=("mymsg1",), tags=["h2", "blue"])
+`easy_insert(rootpath_+"demo_named/xxx", "myiid2", index="end", text="mytext2", values=("mymsg2",), tags="red")
+
+
