@@ -179,7 +179,7 @@ class TkYzwFrameTree(tk.Frame):
         for iid in self.wx.selection():  # tuple
             self.do_deltree(iid)
 
-    def insert(self, parent, index=0, sorted_key=None, reversed=False, **kw):
+    def insert(self, parent, index="end", sorted_key=None, reversed=False, **kw):
         """  添加一个树节点, 可以使用kv对描述, 左侧k=iid(显示为text), 右侧v=value, 每个节点的iid是唯一的,不可以重复
         除了第一个参数parent,建议都采用key传入
         :param parent: ""=top_level or 父iid
@@ -246,7 +246,7 @@ class TkYzwFrameTree(tk.Frame):
                 return iid_user_defined
             raise
 
-    def easy_path(self, path_in:str, index=0, sorted_key=None, reversed=False):
+    def easy_path(self, path_in:str, index="end", sorted_key=None, reversed=False):
         """ easy系列使用路径格式来规范节点的iid """
         path_exists = ""
         path_to_make_reversed = [path_in]
@@ -267,7 +267,7 @@ class TkYzwFrameTree(tk.Frame):
             path_exists = self.insert(path_exists, iid=path_new, text=x, open=True, index=index, sorted_key=sorted_key, reversed=reversed)
             self.all_user_defined_iids.add(path_new)
 
-    def easy_item(self, path:str, index=0, sorted_key=None, reversed=False, **kw):
+    def easy_item(self, path:str, index="end", sorted_key=None, reversed=False, **kw):
         """ 设置指定路径的节点
 
         easy系列使用路径格式来规范节点的iid
@@ -278,7 +278,7 @@ class TkYzwFrameTree(tk.Frame):
             self.easy_path(path, index, sorted_key=sorted_key, reversed=reversed)
         self.wx.item(path, **kw)
 
-    def easy_insert(self, path:str, _iid:str=None, index=0, sorted_key=None, reversed=False, **kw):
+    def easy_insert(self, path:str, _iid:str=None, index="end", sorted_key=None, reversed=False, **kw):
         """ 在指定父路径插入子节点, 允许使用sorted_key排序(此时忽略index)
                 匿名节点: _iid=None text=节点显示名
                 命名节点: iid="path/_iid", text显示名缺省为_iid,也可以另行指定

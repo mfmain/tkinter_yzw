@@ -2,12 +2,11 @@
 # 参考ttk.notebook
 
 
-from myglobals import *
 import tkinter as tk
 import tkinter.ttk as ttk
 
 
-class _Page(Object):
+class _Page:
     def __init__(self, index:int, pagename:str):
         self.index = index
         self.pagename = pagename
