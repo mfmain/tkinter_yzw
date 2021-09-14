@@ -11,6 +11,7 @@ RUsage/command/I I<parentpath>/<nodename>: insert <nodename> as the last  node o
 RUsage/command/note r/R is supposed to replace node while i/I is to insert, a slightly different in performance
 RUsage/keyboard/x x delete current tree
 RUsage/keyboard/X X clear whole window
+RUsage/keyboard/ctrl+c copy contents of selected nodes to clipboard
 RUsage/notes/parent Parent nodes are added automatically, in the order of its first appear
 RUsage/notes/order Use R command to make the parent nodes in advance if you want them in a particular order
 

@@ -83,8 +83,9 @@ class ThreadInputFile(threading.Thread):
             if line_:
                 line += line_
                 if line[-1] == 10:  # b"\n"
-                    print("q.put(%r)"%line)
-                    self.q.put((fn, line.decode(encoding)))
+                    msg = line.decode(encoding)
+                    if log: print(msg.rstrip(), file=log, flush=True)  # strip tailing \r\n
+                    self.q.put((fn, msg))
                     line = b""
                     continue
             time.sleep(args.polltv)
@@ -92,18 +93,22 @@ class ThreadInputFile(threading.Thread):
 
 class ThreadInputUdp(threading.Thread):
     """ 接收UDP,转发到queue """
-    def __init__(self, q:queue.Queue, host:str, port:int):
+    def __init__(self, q:queue.Queue, host:str, port:int, encoding="gbk"):
         threading.Thread.__init__(self)
         self.daemon = True
         self.q = q
+        self.encoding = encoding
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((host, port))
 
     def run(self):
+        encoding = self.encoding
         while True:
             data, addr = self.sock.recvfrom(8192)
-            print(addr, data)
-            self.q.put((addr, data.decode("gbk")))
+            # print(addr, data)
+            msg = data.decode(encoding)
+            if log: print(msg, file=log, flush=True)
+            self.q.put((addr, msg))
 
 
 class Ui:
@@ -140,8 +145,9 @@ class Ui:
         a = self.ui_tree.wx.selection()
         a_msg = []
         for iid in a:
+            text = self.ui_tree.wx.item(iid, 'text')
             values = self.ui_tree.wx.item(iid, 'values')
-            a_msg.append("%s: %s" % (iid, ','.join(values)))
+            a_msg.append("%s: %s" % (text, ','.join(values)))
         clip_copy('\n'.join(a_msg))
 
     def on_timer(self):
@@ -220,9 +226,9 @@ def _getopt():
     argv = sys.argv[1:]
     parser = argparse.ArgumentParser(description='ulogview')
     parser.add_argument('-f', '--file', type=str, default="", help='load from logfile')
-    parser.add_argument('--file_encoding', type=str, default="gbk", help='load logfile encoding')
     parser.add_argument('-u', '--udp', type=int, default=17878, help='listen on udp port')
     parser.add_argument('-l', '--log', type=str, default="", help='write to logfile')
+    parser.add_argument('--source_encoding', type=str, default="gbk", help='source(file/udp) encoding')
     parser.add_argument('--log_encoding', type=str, default="gbk", help='write logfile encoding')
     parser.add_argument('--polltv', type=float, default=0.3, help='write logfile encoding')
 
@@ -238,9 +244,9 @@ else:
     log = None
 
 if args.file:
-    ThreadInputFile(g.q, fn=args.file, encoding=args.file_encoding).start()
+    ThreadInputFile(g.q, fn=args.file, encoding=args.source_encoding).start()
 else:
-    ThreadInputUdp(g.q, host="0.0.0.0", port=args.udp).start()
+    ThreadInputUdp(g.q, host="0.0.0.0", port=args.udp, encoding=args.source_encoding).start()
 
 
 ui = Ui()
