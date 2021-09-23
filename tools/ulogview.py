@@ -1,8 +1,12 @@
 # coding: gbk
 
-# pyinstaller -F -w --exclude numpy %
+# pyinstaller -F -w --exclude numpy ulogview.py
+# DEBUG_ARG: -f ulogview_sample.log -l d:\^\ulogview.log
+#            -f D:\tx\src\frpy\py\robot_rmf_7808.log
+
 
 import sys
+import os
 import time
 import queue
 import socket
@@ -67,16 +71,18 @@ class ThreadInputFile(threading.Thread):
         self.daemon = True
         self.q = q
         self.fn = fn
-        self.file = open(fn, "rb")
         self.encoding = encoding
         self.polltv = polltv
 
     def run(self):
         fn = self.fn
-        file = self.file
+        file = open(fn, "rb")
         encoding = self.encoding
         polltv = self.polltv
         line = b""
+        st = os.stat(self.fn)
+        # st_ino = st.st_ino
+        st_size = 0
         while True:
             line_ = file.readline()
             print("readline %r" % line_)
@@ -88,6 +94,14 @@ class ThreadInputFile(threading.Thread):
                     self.q.put((fn, msg))
                     line = b""
                     continue
+
+            # read nothing
+            st = os.stat(self.fn)
+            if st.st_size < st_size or st.st_nlink < 1:
+                print("file rewinded, reopen it")
+                file = open(fn, "rb")
+                line = b""
+            st_size = st.st_size
             time.sleep(args.polltv)
 
 
@@ -114,7 +128,7 @@ class ThreadInputUdp(threading.Thread):
 class Ui:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("ulogd")
+        self.root.title("ulogview")
         self.root.geometry('800x800+200+200') # yscroll=True时需要设，否则窗口很小
         fr = tk.Frame(self.root)
 

@@ -1,5 +1,5 @@
 
-t ulogview.log
+t top_level_path
 
 RUsage/node A full node path is similar to file path in a file system: parentpaths/nodename
 RUsage/command content format of log files or udp messages
@@ -27,7 +27,7 @@ Idemo_named/xxx yyy2:nodetext2 (2)same as above, but display a specified text in
 idemo_named/xxx yyy3 (3)insert node xxx/yyy3 as the first node of parent "demo/xxx"
 idemo_named/xxx yyy3 (4)overwrite yyy3, a little slower than r/R command
 
-Rdemo_log/Anonymous  Anonymous nodes are automatically named and you cannot reference them(i.e. change them)
+Rdemo_log/Anonymous :- Anonymous nodes are automatically named and you cannot reference them(i.e. change them)
 Idemo_log/Anonymous :display_as specify a display text
 Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
 Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
