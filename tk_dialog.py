@@ -3,10 +3,13 @@ import tkinter as tk
 
 
 class TkDialog(tk.Toplevel):
-    def __init__(self, master, *la, **ka):
-        super().__init__(master, *la, **ka)
+    def __init__(self, master, title=None, modal=True,  **ka):
+        super().__init__(master, **ka)
+        if title is not None:
+            self.title(title)
         self.transient(master)
-        self.grab_set()
+        self.modal = modal
+        if modal: self.grab_set()
         self.master = master
 
         #self.geometry("400x300")
@@ -21,8 +24,11 @@ class TkDialog(tk.Toplevel):
         self.destroy()
 
     def run(self):
-        self.wait_window(self)
-        return self.result
+        if self.modal:
+            self.wait_window(self)
+            return self.result
+        else:
+            return None
 
 
 if __name__ == '__main__':
