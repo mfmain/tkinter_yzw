@@ -17,14 +17,14 @@ class _DlgItemEditor(TkYzwDialog):
 
         fr = tk.Frame(self); fr.pack(side="top", pady=5, fill="both")
 
-        tk.Button(fr, text="确认", command=self.on_确认).pack(side="left", fill="both", expand=1)
-        tk.Button(fr, text="取消", command=self.on_取消).pack(side="left", fill="both", expand=1)
+        tk.Button(fr, text="OK", command=self.on_OK).pack(side="left", fill="both", expand=1)
+        tk.Button(fr, text="CANCEL", command=self.on_CANCEL).pack(side="left", fill="both", expand=1)
 
-    def on_确认(self):
+    def on_OK(self):
         self.destroy()
         self.result = self.uiv_edit1.get()
 
-    def on_取消(self):
+    def on_CANCEL(self):
         self.destroy()
         self.result = None
 
@@ -81,7 +81,7 @@ class TkYzwListedit(tk.Listbox):
         print(f"curselection {a_sel}")
         if not a_sel: return
         sel = a_sel[0]
-        text = self.get(sel)  #type: str #> "IC2111  2"
+        text = self.get(sel)
         print(f"get {text}")
         if text == '+':
             dlg = self.cls_item_editor(self.master)
@@ -118,8 +118,8 @@ if __name__ == '__main__':
 
             fr = tk.Frame()
             fr.pack(side="top", fill='x')
-            tk.Button(fr, text="确定", command=self.on_ok, bg="#d0e0d0").pack(side="left")
-            tk.Button(fr, text="退出", command=self.root.destroy, bg="#d0e0d0").pack(side="left")
+            tk.Button(fr, text="OK", command=self.on_ok, bg="#d0e0d0").pack(side="left")
+            tk.Button(fr, text="EXIT", command=self.root.destroy, bg="#d0e0d0").pack(side="left")
 
         def on_ok(self):
             a = self.uix_le.on_layout_save()
