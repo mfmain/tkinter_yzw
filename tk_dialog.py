@@ -2,7 +2,7 @@
 import tkinter as tk
 
 
-class TkDialog(tk.Toplevel):
+class TkYzwDialog(tk.Toplevel):
     def __init__(self, master, title=None, modal=True,  **ka):
         super().__init__(master, **ka)
         if title is not None:
@@ -32,7 +32,7 @@ class TkDialog(tk.Toplevel):
 
 
 if __name__ == '__main__':
-    class DlgDemo(TkDialog):
+    class DlgDemo(TkYzwDialog):
         def __init__(self, master, *la, **ka):
             super().__init__(master, *la, **ka)
 
