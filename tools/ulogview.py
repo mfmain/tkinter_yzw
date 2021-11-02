@@ -125,7 +125,6 @@ class Ui:
 
         self.on_timer()
 
-
     def on_timer(self):
         for addr, x in q_nonblock_polling(g.q):
             rootpath, rootpath_ = g.root_path_get(addr)
