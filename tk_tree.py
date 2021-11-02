@@ -1,10 +1,33 @@
 # coding: utf-8
 
+import sys
+import time
 import tkinter as tk
 import tkinter.ttk as ttk
 #import bisect
 from sortedcontainers import SortedList
 from collections import defaultdict
+
+
+if sys.platform == 'win32':
+    import win32clipboard
+    import win32con
+
+    def clip_copy(msg):
+        win32clipboard.OpenClipboard()
+        win32clipboard.EmptyClipboard()
+        win32clipboard.SetClipboardData(win32con.CF_TEXT, msg.encode("gbk"))
+        win32clipboard.CloseClipboard()
+else:
+    def clip_copy(msg):
+        pass
+
+
+def list_get(a:list, i:int, default:any):
+    if i < 0 or i >= len(a):
+        return default
+    else:
+        return a[i]
 
 
 class TkYzwFrameTree(tk.Frame):
@@ -107,8 +130,27 @@ class TkYzwFrameTree(tk.Frame):
         #fr.bind("<F3>", self.on_F3)
         #fr.bind("<Control-c>", self.on_COPY)
 
+        self.bind("x", self.on_key_x)
+        self.bind("X", self.on_key_X)
+        self.bind("<Control-c>", self.on_key_ctrl_c)
+
     def bind(self, sequence, func):
         self.wx.bind(sequence, func)
+
+    def on_key_X(self, _):
+        self.do_clear()
+
+    def on_key_x(self, _):
+        self.do_deltree_selected()
+
+    def on_key_ctrl_c(self, _):
+        a = self.wx.selection()
+        a_msg = []
+        for iid in a:
+            text = self.wx.item(iid, 'text')
+            values = self.wx.item(iid, 'values')
+            a_msg.append("%s: %s" % (text, ','.join(values)))
+        clip_copy('\n'.join(a_msg))
 
     def __on_tree_select(self, event):
         if self.cb_command:
@@ -311,6 +353,75 @@ class TkYzwFrameTree(tk.Frame):
                 kw['text'] = _iid
         return self.insert(path, index, sorted_key=sorted_key, reversed=reversed, **kw)
 
+    def treecmd(self, rootpath:str, rootpath_:str, x:str):
+        """ rootpath_是rootpath加上目录分隔符/, 这个冗余仅仅是为了性能优化 """
+
+        # t title            # 设置root节点显示的文本
+        # X                  # clear all
+        # xaaa/bbb           # deltree aaa/bbb
+
+        # rxxx/yyy msg       # 更改路径xxx/yyy的msg, 如果不存在,则插入
+        # Rxxx/yyy msg       # R,r的区别在于r在头部插入,R在尾部插入,其他用法相同
+
+        # ixxx yyy:text msg  # 在路径xxx下面插入子节点yyy, 冒号后面为节点上显示的文本(可缺省使用yyy)
+        # Ixxx yyy:text msg  # I, i的区别在于i在头部插入,I在尾部插入,其他用法相同
+        # ixxx yyy      msg  # 在路径xxx下面插入子节点yyy, 节点上显示的文本为yyy
+        # ixxx :text    msg  # 在路径xxx下面插入匿名节点(系统自动提供), 冒号后面为节点上显示的文本
+        # ixxx :<ts>    msg  # 在路径xxx下面插入匿名节点(系统自动提供), 节点上显示时间戳
+
+        # 高级命令:
+        # `<exec_source_code>  # 直接调用self.<exec_source_code>
+        # `easy_inert(path, _iid, index=0...)
+
+        if not x: return True
+        action, x_ = x[0], x[1:]
+        if action == 'r':
+            a = x_.split(maxsplit=1)
+            relpath = a[0]
+            if relpath == '.':
+                self.easy_item(rootpath, values=(list_get(a, 1, ""),))
+            else:
+                self.easy_item(rootpath_ + relpath, values=(list_get(a, 1, ""),))
+        elif action == 'R':
+            a = x_.split(maxsplit=1)
+            self.easy_item(rootpath_ + a[0], index="end", values=(list_get(a, 1, ""),))
+        elif action == 'i':
+            a = x_.split(maxsplit=2)
+            iid_text = list_get(a, 1, "").split(":")
+            _iid = list_get(iid_text, 0, "")
+            text = list_get(iid_text, 1, "")
+            if text == '<ts>': text = time.strftime("%H:%M:%S")
+            if not text: text = _iid
+            if not _iid: _iid = None
+            values = (list_get(a, 2, ""),)
+            self.easy_insert(rootpath_ + a[0], _iid=_iid, text=text, values=values)
+        elif action == 'I':
+            a = x_.split(maxsplit=2)
+            iid_text = list_get(a, 1, "").split(":")
+            _iid = list_get(iid_text, 0, "")
+            text = list_get(iid_text, 1, "")
+            if text == '<ts>': text = time.strftime("%H:%M:%S")
+            if not text: text = _iid
+            if not _iid: _iid = None
+            values = (list_get(a, 2, ""),)
+            self.easy_insert(rootpath_ + a[0], index="end", _iid=_iid, text=text, values=values)
+        elif action == 'X':
+            self.do_clear()
+        elif action == 'x':
+            if x_ == '.':
+                self.do_deltree(rootpath)
+            else:
+                self.do_deltree(rootpath_ + x_)
+        elif action == '`':
+            try:
+                exec("self." + x_)
+            except:
+                pass
+        else:
+            return False  # fail to parse cmd
+
+        return True  # succ
+
 
 class FrameTaskTree(TkYzwFrameTree):
     def __init__(self, master, column_list:list, width_list:list, scroll="xy", **ak):
@@ -398,8 +509,6 @@ if __name__ == '__main__':
             ui_tree.wx.bind("<Double-1>", self.on_tree_d1)
             ui_tree.pack(side="top", fill="both", expand=1)
 
-            ui_tree.bind("<Control-c>", self.on_key_ctrl_c)
-
         def on_btn_easy(self):
             wx = self.ui_tree
             wx.easy_insert("", _iid='a', values=('a',), tags="h1")
@@ -463,24 +572,6 @@ if __name__ == '__main__':
                 #tree.set(rowiid, "#0", value="xxx")
                 pass
 
-        def on_key_ctrl_c(self, _):
-            a = self.ui_tree.wx.selection()
-            a_msg = []
-            for iid in a:
-                values = self.ui_tree.wx.item(iid, 'values')
-                a_msg.append("%s: %s" % (iid, ','.join(values)))
-            clip_copy('\n'.join(a_msg))
-
-
-    import win32clipboard
-    import win32con
-
-
-    def clip_copy(msg):
-        win32clipboard.OpenClipboard()
-        win32clipboard.EmptyClipboard()
-        win32clipboard.SetClipboardData(win32con.CF_TEXT, msg.encode("gbk"))
-        win32clipboard.CloseClipboard()
 
     ui = Ui()
     ui.root.mainloop()
