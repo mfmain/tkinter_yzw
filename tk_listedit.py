@@ -1,7 +1,8 @@
 # coding: utf8
 
-# see https://stackoverflow.com/questions/14459993/tkinter-listbox-drag-and-drop-with-python
-# there are samples for selectmode MULTIPLE
+# drag & drop items:
+#     see https://stackoverflow.com/questions/14459993/tkinter-listbox-drag-and-drop-with-python
+#     there are samples for selectmode MULTIPLE
 
 
 import tkinter as tk
@@ -9,8 +10,8 @@ from tk_dialog import TkYzwDialog
 
 
 class _DlgItemEditor(TkYzwDialog):
-    def __init__(self, master, itemtext="", title=None, **ka):
-        super().__init__(master, title=title, **ka)
+    def __init__(self, master, itemtext="", **ka):
+        super().__init__(master, title="item edit", **ka)
 
         self.uiv_edit1 = tk.StringVar(value=itemtext)
         tk.Entry(self, textvariable=self.uiv_edit1).pack(fill="both", expand=0)
@@ -18,13 +19,13 @@ class _DlgItemEditor(TkYzwDialog):
         fr = tk.Frame(self); fr.pack(side="top", pady=5, fill="both")
 
         tk.Button(fr, text="OK", command=self.on_OK).pack(side="left", fill="both", expand=1)
-        tk.Button(fr, text="CANCEL", command=self.on_CANCEL).pack(side="left", fill="both", expand=1)
+        tk.Button(fr, text="Cancel", command=self.on_Cancel).pack(side="left", fill="both", expand=1)
 
     def on_OK(self):
         self.destroy()
         self.result = self.uiv_edit1.get()
 
-    def on_CANCEL(self):
+    def on_Cancel(self):
         self.destroy()
         self.result = None
 
@@ -113,13 +114,13 @@ if __name__ == '__main__':
             self.root.title("tk_listedit demo")
 
             items = ["111", "2222", "33333"]
-            self.uix_le = TkYzwListedit(self.root, items=items)
+            self.uix_le = TkYzwListedit(self.root, items=items, cls_item_editor=_DlgItemEditor)
             self.uix_le.pack()
 
             fr = tk.Frame()
             fr.pack(side="top", fill='x')
             tk.Button(fr, text="OK", command=self.on_ok, bg="#d0e0d0").pack(side="left")
-            tk.Button(fr, text="EXIT", command=self.root.destroy, bg="#d0e0d0").pack(side="left")
+            tk.Button(fr, text="Exit", command=self.root.destroy, bg="#d0e0d0").pack(side="left")
 
         def on_ok(self):
             a = self.uix_le.on_layout_save()
