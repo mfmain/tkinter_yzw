@@ -129,7 +129,7 @@ class Ui:
     def on_timer(self):
         for addr, x in q_nonblock_polling(g.q):
             rootpath, rootpath_ = g.root_path_get(addr)
-            if self.ui_tree.treecmd(rootpath, rootpath_, x): continue
+            if self.ui_tree.treecmd(x, rootpath, rootpath_): continue
             action, x_ = x[0], x[1:]
             if action == 't':
                 # title for rootpath

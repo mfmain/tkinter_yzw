@@ -353,8 +353,9 @@ class TkYzwFrameTree(tk.Frame):
                 kw['text'] = _iid
         return self.insert(path, index, sorted_key=sorted_key, reversed=reversed, **kw)
 
-    def treecmd(self, rootpath:str, rootpath_:str, x:str):
-        """ rootpath_是rootpath加上目录分隔符/, 这个冗余仅仅是为了性能优化 """
+    def treecmd(self, x:str, rootpath="", rootpath_=""):
+        """ 允许指定一个顶级rootpath
+            rootpath_是rootpath加上目录分隔符/, 这个冗余仅仅是为了性能优化 """
 
         # t title            # 设置root节点显示的文本
         # X                  # clear all
@@ -374,6 +375,9 @@ class TkYzwFrameTree(tk.Frame):
         # `easy_inert(path, _iid, index=0...)
 
         if not x: return True
+        if rootpath:
+            if not rootpath_:
+                rootpath_ = rootpath + '/'
         action, x_ = x[0], x[1:]
         if action == 'r':
             a = x_.split(maxsplit=1)
