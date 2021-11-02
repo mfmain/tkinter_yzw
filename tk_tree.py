@@ -353,7 +353,7 @@ class TkYzwFrameTree(tk.Frame):
                 kw['text'] = _iid
         return self.insert(path, index, sorted_key=sorted_key, reversed=reversed, **kw)
 
-    def treecmd(self, x:str, rootpath="", rootpath_=""):
+    def treecmd(self, cmd:str, rootpath="", rootpath_=""):
         """ 允许指定一个顶级rootpath
             rootpath_是rootpath加上目录分隔符/, 这个冗余仅仅是为了性能优化 """
 
@@ -374,23 +374,24 @@ class TkYzwFrameTree(tk.Frame):
         # `<exec_source_code>  # 直接调用self.<exec_source_code>
         # `easy_inert(path, _iid, index=0...)
 
-        if not x: return True
+        if not cmd: return True
         if rootpath:
             if not rootpath_:
                 rootpath_ = rootpath + '/'
-        action, x_ = x[0], x[1:]
+        action, cmda = cmd[0], cmd[1:]
         if action == 'r':
-            a = x_.split(maxsplit=1)
+            a = cmda.split(maxsplit=1)  # iid, msg
             relpath = a[0]
             if relpath == '.':
                 self.easy_item(rootpath, values=(list_get(a, 1, ""),))
             else:
                 self.easy_item(rootpath_ + relpath, values=(list_get(a, 1, ""),))
         elif action == 'R':
-            a = x_.split(maxsplit=1)
+            a = cmda.split(maxsplit=1)  # iid, msg
             self.easy_item(rootpath_ + a[0], index="end", values=(list_get(a, 1, ""),))
         elif action == 'i':
-            a = x_.split(maxsplit=2)
+            a = cmda.split(maxsplit=2)  # iid_parent iid_new:text msg
+            iid_parent = rootpath_ + a[0] if a[0] != '.' else rootpath
             iid_text = list_get(a, 1, "").split(":")
             _iid = list_get(iid_text, 0, "")
             text = list_get(iid_text, 1, "")
@@ -398,9 +399,10 @@ class TkYzwFrameTree(tk.Frame):
             if not text: text = _iid
             if not _iid: _iid = None
             values = (list_get(a, 2, ""),)
-            self.easy_insert(rootpath_ + a[0], _iid=_iid, text=text, values=values)
+            self.easy_insert(iid_parent, index=0, _iid=_iid, text=text, values=values)
         elif action == 'I':
-            a = x_.split(maxsplit=2)
+            a = cmda.split(maxsplit=2)  # iid_parent iid_new:text msg
+            iid_parent = rootpath_ + a[0] if a[0] != '.' else rootpath
             iid_text = list_get(a, 1, "").split(":")
             _iid = list_get(iid_text, 0, "")
             text = list_get(iid_text, 1, "")
@@ -408,17 +410,17 @@ class TkYzwFrameTree(tk.Frame):
             if not text: text = _iid
             if not _iid: _iid = None
             values = (list_get(a, 2, ""),)
-            self.easy_insert(rootpath_ + a[0], index="end", _iid=_iid, text=text, values=values)
+            self.easy_insert(iid_parent, index="end", _iid=_iid, text=text, values=values)
         elif action == 'X':
             self.do_clear()
         elif action == 'x':
-            if x_ == '.':
+            if cmda == '.':
                 self.do_deltree(rootpath)
             else:
-                self.do_deltree(rootpath_ + x_)
+                self.do_deltree(rootpath_ + cmda)
         elif action == '`':
             try:
-                exec("self." + x_)
+                exec("self." + cmda)
             except:
                 pass
         else:

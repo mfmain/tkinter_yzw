@@ -1,6 +1,6 @@
 # coding: gbk
 
-# pyinstaller -F -w --exclude numpy ulogview.py
+# py39cli; pyinstaller -F -w --exclude numpy ulogview.py
 # DEBUG_ARG: -f ulogview_sample.log -l d:\^\ulogview.log
 #            -f D:\tx\src\frpy\py\robot_rmf_7808.log
 
