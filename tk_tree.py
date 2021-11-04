@@ -133,6 +133,8 @@ class TkYzwFrameTree(tk.Frame):
         self.bind("x", self.on_key_x)
         self.bind("X", self.on_key_X)
         self.bind("<Control-c>", self.on_key_ctrl_c)
+        self.bind("<Control-a>", self.on_key_ctrl_a)
+
 
     def bind(self, sequence, func):
         self.wx.bind(sequence, func)
@@ -151,6 +153,10 @@ class TkYzwFrameTree(tk.Frame):
             values = self.wx.item(iid, 'values')
             a_msg.append("%s: %s" % (text, ','.join(values)))
         clip_copy('\n'.join(a_msg))
+
+    def on_key_ctrl_a(self, _):
+        a_iid = self.iter_children("")
+        self.wx.selection_set(a_iid)
 
     def __on_tree_select(self, event):
         if self.cb_command:
@@ -171,7 +177,8 @@ class TkYzwFrameTree(tk.Frame):
     #         print("iter_children for", x)
     #         self.iter_children(x)
 
-    def iter_children(self, iid:str, a=[]):
+    def iter_children(self, iid="", a=[]):
+        """ 返回iid下的所有子节点，如果iid为空，则返回所有节点 """
         try:
             children = self.wx.get_children(iid)
         except:
@@ -180,6 +187,12 @@ class TkYzwFrameTree(tk.Frame):
         for x in children:
             self.iter_children(x, a)
         return a
+
+    def get_all_children(tree, item=""):
+        children = self.wx.get_children(item)
+        for child in children:
+            children += get_all_children(self.wx, child)
+        return children
 
     def on_tree_double1(self, event):
         print('on_tree_double1(%r):' % event)  #> <ButtonPress event state=Mod1 num=1 x=264 y=118>
