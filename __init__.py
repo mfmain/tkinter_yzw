@@ -1,3 +1,4 @@
+from .tk_mainui import *
 from .tk_autoscrollbar import *
 from .tk_autoscrollbar import *
 from .tk_dialog import *
