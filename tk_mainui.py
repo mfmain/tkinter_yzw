@@ -15,7 +15,7 @@ import tkinter as tk
 mainq = queue.Queue()  # 主消息队列
 
 
-class MainUi_:
+class TkYzwMainUi:
     self = None  # ready mark
     def __init__(self, title=None, font='微软雅黑 9', icon_fn="", bg=None, geometry=None, topmost=False, layout=None, enable_on_idle=False):
         self.root = tk.Tk()
@@ -99,7 +99,7 @@ if __name__ == '__main__':
             time.sleep(5)
 
 
-    class MainUi(MainUi_):
+    class MainUi(TkYzwMainUi):
         def __init__(self, *la, **ka):
             super().__init__(*la, **ka)
             fr = self.root
