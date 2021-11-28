@@ -57,7 +57,8 @@ class TkYzwMainUi:
     def on_save_layout(self, f):
         pass
 
-    def do_exit(self):
+    def do_exit(self, *la, **ka):
+        # *la, **ka to accept mainui_dispatch's calling convention
         if self.after_id:
             self.root.after_cancel(self.after_id)
             self.after_id = None
@@ -120,15 +121,15 @@ if __name__ == '__main__':
             w.pack(side="top", padx=10, pady=5)
 
 
-    class MainApp():
+    class MainApp:
         def __init__(self):
             threading.Thread(target=self.thproc_mainloop, args=(), daemon=True).start()
             threading.Thread(target=thproc_timer, args=(), daemon=True).start()
-            self.ui_dispatcher = {
-                "demo_bind": self.on_ui_demo_bind,
-                "demo_command": self.on_ui_demo_command,
-                "exit": self.on_ui_exit
-            }
+            # self.ui_dispatcher = {
+            #     "demo_bind": self.on_ui_demo_bind,
+            #     "demo_command": self.on_ui_demo_command,
+            #     "exit": self.on_ui_exit
+            # }
 
         def on_ui_demo_bind(self, *la, **ka):
             print(f"demo_bind: la={la} ka={ka}")
@@ -146,16 +147,19 @@ if __name__ == '__main__':
         def thproc_mainloop(self):
             while 1:
                 try:
-                    msgtype, msga = mainq.get(block=True)
+                    msgtype, *argv = mainq.get(block=True)
                 except:
                     traceback.print_exc()
                     continue
                 if msgtype == 'ui':
-                    mainui.mainui_dispatch(msga, self.ui_dispatcher)
+                    callbackid, widget, la, ka = argv[0]
+                    # mainui.mainui_dispatch(argv[0], self.ui_dispatcher)
+                    func = getattr(self, f"on_ui_{callbackid}")
+                    if func: func(widget, *la, **ka)
                 elif msgtype == 'timer':
                     print("timer")
                 else:
-                    print(f"unhandled {msgtype} {msga}")
+                    print(f"{msgtype} {msga}")
 
 
 if __name__ == '__main__':
