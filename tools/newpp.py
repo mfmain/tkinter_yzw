@@ -1,11 +1,37 @@
-#!/usr/bin/python
+# coding： gbk
 
 import os, sys, time, shutil
 import exifread as exif
 import argparse
-# import tkinter as tk
-# from tkinter.filedialog import askdirectory
-# from tkinter_yzw.tk_tree import TkYzwFrameTree
+import threading
+import traceback
+from collections import defaultdict
+import tkinter as tk
+from tkinter.filedialog import askdirectory
+from tkinter_yzw.tk_tree import TkYzwFrameTree
+from tkinter_yzw.tk_mainui import TkYzwMainUi
+import win32api
+# from PIL import Image
+# import cv2
+
+def img_show(fn):
+    win32api.ShellExecute(0, 'open', fn, None, '.', 0)
+
+
+# def img_show_pil(fn):
+#     im = Image.open(fn)
+#     im.show()
+#
+#
+# def img_show_cv2(fn):
+#     img = cv2.imread(fn)
+#     cv2.imshow("Image", img)
+
+
+def img_show_os(fn):
+    # os.execv(r"C:\Program Files (x86)\XnView\xnview.exe", ("xnview.exe", fn))
+    # os.system(fr'"C:\Program Files (x86)\XnView\xnview.exe" "{fn}"')
+    win32api.ShellExecute(0, 'open', r"C:\Program Files (x86)\XnView\xnview.exe", fn, '', 1)
 
 
 class CSTA:
@@ -28,7 +54,7 @@ def opt_parse(argv):
     parser = argparse.ArgumentParser(description='gather photoes')
     parser.add_argument('srcdir',                  type=str,                  help='source dir')
     parser.add_argument('dstdir',                  type=str,                  help='target dir')
-    parser.add_argument('cmpdir',                  type=str,                  help='compare dir')
+    # parser.add_argument('cmpdir',                  type=str,                  help='compare dir')
     parser.add_argument("-v", "--verbose",         action="count", default=0, help="increase output verbosity")
     parser.add_argument("-n", "--dryrun",          action="store_true",       help="dry run")
     parser.add_argument("-k", "--keepsame",        action="store_true",       help="keep source if dst exists")
@@ -73,23 +99,23 @@ def move_photo_fd(srcdir, filename, dstpdir, t, tn):
         if not opt.keepsame: sta.removed += 1
         return
 
-    if not opt.dryrun:
-        if not os.path.exists(dstdir): os.mkdir(dstdir)
-        try:
-            shutil.move(filename, dstdir)
-            sta.moved += 1
-            # shutil.copy2(filename, dstdir)  # 用copy2会保留图片的原始属性
-            # os.remove(filename)
-            print("")
-        except:
-            sta.failed += 1
-            print("failed")
-    else:
-        sta.moved += 1
-        print("")
+    # if not opt.dryrun:
+    #     if not os.path.exists(dstdir): os.mkdir(dstdir)
+    #     try:
+    #         shutil.move(filename, dstdir)
+    #         sta.moved += 1
+    #         # shutil.copy2(filename, dstdir)  # 用copy2会保留图片的原始属性
+    #         # os.remove(filename)
+    #         print("")
+    #     except:
+    #         sta.failed += 1
+    #         print("failed")
+    # else:
+    #     sta.moved += 1
+    #     print("")
 
 
-def move_photo_dd(srcdir, dstdir):
+def iter_srcdir(srcdir):
     for root, dirs, files in os.walk(srcdir, True):
         print ("目录" + root)
         for filename in files:
@@ -113,7 +139,8 @@ def move_photo_dd(srcdir, dstdir):
             if not t:
                 tn = '文件时间戳'
                 t = t_filetime(filepath)
-            move_photo_fd(root, filename, dstdir, t, tn)
+            #move_photo_fd(filepath, filename, t, tn)
+            yield (filepath, filename, t, tn)
         if not opt.depth: break # 不遍历子目录
 
 
@@ -147,35 +174,74 @@ def is_same(fn1, fn2):
     return False
 
 
-# class Ui:
-#     def __init__(self):
-#         self.root = tk.Tk()
-#         self.root.title("newpp")
-#         self.root.geometry('800x800+200+200')  # yscroll=True时需要设，否则窗口很小
-#         fr = tk.Frame(self.root)
-#
-#
-#
-#         column_list = [("", 180), (",w", "100,w+")]
-#         ui_tree = TkYzwFrameTree(self.root, column_list, scroll="xy", height=10)
-#         # show="tree" 无抬头栏；  show="headings" 有抬头
-#         self.ui_tree = ui_tree
-#         # ui_tree.wx.column('#0', stretch="no", minwidth=0, width=0)
-#
-#         # for path in ["状态", "当前任务", "已完成任务"][::-1] :
-#         #     self.ui_tree.easy_item(path, text=path, open=True, tags="h1")
-#         #
-#         # self.ui_tree.easy_item("状态/连接信息", value="xxx")
-#         ui_tree.pack(side="top", fill="both", expand=1)
-#
-#         self.on_timer()
+class MainUi(TkYzwMainUi):
+    def __init__(self):
+        super().__init__(title="newpp", geometry='800x500+200+200')
+        w = TkYzwFrameTree(self.root, column_list=[("源文件,w", 300), ("目的文件,w", "100,w+")], scroll="xy", height=10,
+                                 command=lambda *la, **ka: self.on_callback("tree_command", w, *la, **ka))
+        w.pack(side="top", fill="both", expand=1)
+        self.ui_tree = w
+
+        self.ui_tree.easy_insert("", "原始时间", index="end", open=True, tags="h1")
+        self.ui_tree.easy_insert("", "图片时间", index="end", open=True, tags="h1")
+        self.ui_tree.easy_insert("", "文件名时间", index="end", open=True, tags="h1")
+        self.ui_tree.easy_insert("", "文件时间戳", index="end", open=True, tags="h1")
+        self.ui_tree.easy_insert("", "same", index="end", open=False, tags="h1")
+
+
+class MainApp:
+    def __init__(self):
+        self.d_tn_cnt = defaultdict(int)
+
+        threading.Thread(target=self.mainloop, args=(), daemon=True).start()
+        threading.Thread(target=self.main_newpp, args=(), daemon=True).start()
+
+    def main_newpp(self):
+        for filepath_src, filename, t, tn in iter_srcdir(opt.srcdir):
+            dstdir = opt.dstdir + "\\" + t
+            filepath_dst = os.path.join(dstdir, filename)
+            if is_same(filepath_src, filepath_dst):
+                tn = "same"
+            self.d_tn_cnt[tn] += 1
+            mainui.ui_tree.easy_item(tn, text=f"{tn}({self.d_tn_cnt[tn]})")
+            mainui.ui_tree.easy_insert(tn, filepath_src, value=(filepath_dst,))
+
+    def on_ui_tree_command(self, w, iid:str, **ka):
+        print(f"on_ui_tree_command: w={w}, iid={iid}, ka={ka}")
+        try:
+            tn, filepath_src = iid.split("/", maxsplit=1)
+            print(f"open {repr(filepath_src)}")
+        except:
+            return
+
+        img_show(filepath_src)
+
+    def mainloop(self):
+        while 1:
+            try:
+                msgtype, *argv = mainq.get(block=True)
+            except:
+                traceback.print_exc()
+                continue
+            if msgtype == 'ui':
+                callbackid, widget, la, ka = argv[0]
+                func = getattr(self, f"on_ui_{callbackid}")
+                if func: func(widget, *la, **ka)
+            elif msgtype == 'timer':
+                print("timer")
+            else:
+                print(f"{msgtype} {msga}")
 
 
 if __name__=="__main__":
     sta = CSTA()
     opt = opt_parse(sys.argv[1:])
-    if opt.verbose: print(opt)
-    move_photo_dd(opt.srcdir, opt.dstdir)
-    sta.show()
+    opt.dryrun = 1
+    # main_newpp(opt.srcdir, opt.dstdir)
 
-    # input("OK")
+    mainui = MainUi()
+    mainq = mainui.mainq
+    mainapp = MainApp()
+    mainui.run()
+
+    sta.show()
