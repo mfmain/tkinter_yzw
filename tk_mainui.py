@@ -7,18 +7,45 @@
 #     所有callback和timer串行排队执行，谁也不能打断谁，所以可以省去资源竞争的加锁操作
 
 
+import os
+import chardet
 import queue
 import traceback
+import yaml
 import tkinter as tk
 
 
-mainq = queue.Queue()  # 主消息队列
+
+
+def _yaml_load(fn, encoding=None, default=None):
+    if default is None:
+        default = dict()
+
+    if os.path.exists(fn):
+        bcontent = open(fn, "rb").read()
+        if encoding is None:
+            encoding = chardet.detect(bcontent)['encoding']
+        yml = yaml.load(bcontent.decode(encoding), Loader=yaml.FullLoader)  # throw exception
+        return default if yml is None else yml
+    else:
+        return default
 
 
 class TkYzwMainUi:
     self = None  # ready mark
-    def __init__(self, title=None, font='微软雅黑 9', icon_fn="", bg=None, geometry=None, topmost=False, layout=None, enable_on_idle=False):
+
+    def __init__(self, title=None, font='微软雅黑 9', icon_fn="", bg=None, geometry=None, topmost=False, layout=None, mainq=None, enable_on_idle=False):
+        """
+        param layout:
+            str:  filename of layout, autosave layout when closed
+            dict: dict of layout
+        """
         self.root = tk.Tk()
+        if mainq is None:
+            self.mainq = queue.Queue()  # 主消息队列
+        else:
+            self.mainq = mainq
+
         self.title = title
         if title: self.root.title(title)
         self.root.option_add('*Font', font)  # '微软雅黑 9 bold'
@@ -31,15 +58,18 @@ class TkYzwMainUi:
             self.root.protocol("WM_DELETE_WINDOW", self.do_exit)
             if isinstance(layout, str):
                 self.layout_fn = layout
-                self.layout = yaml_load(g_.fn_app_layout, False, encoding="utf-8")
+                self.layout = _yaml_load(open(self.layout_fn, "r", encoding="gbk"), {})
             elif isinstance(layout, dict):
                 self.layout = layout
 
-            geometry = self.layout.get("geometry", None)  #>  'geometry':'405x427+531+450'
-            if geometry: self.root.geometry(geometry)
+            if geometry is None:
+                geometry = self.layout.get("geometry", None)  #>  'geometry':'405x427+531+450'
 
         else:
             self.layout = dict()
+
+        if geometry:
+            self.root.geometry(geometry)
 
         self.self = self  # ready
         self.enable_on_idle = enable_on_idle
@@ -73,7 +103,7 @@ class TkYzwMainUi:
 
     def on_callback(self, callbackid, widget, *la, **ka):
         # print(f"MainUi.on_callback {time.time()} a={widget, la, ka}")
-        mainq.put(("ui", [callbackid, widget, la, ka]))
+        self.mainq.put(("ui", [callbackid, widget, la, ka]))
 
     def run(self):
         if self.enable_on_idle:
@@ -167,6 +197,7 @@ if __name__ == '__main__':
     import time
 
     mainui = MainUi()
+    mainq = mainui.mainq
     mainapp = MainApp()
     mainui.run()
     print("bye")
