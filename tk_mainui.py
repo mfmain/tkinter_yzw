@@ -12,6 +12,7 @@ import chardet
 import queue
 import traceback
 import yaml
+import threading
 import tkinter as tk
 
 
@@ -139,6 +140,7 @@ class TkYzwMainUiApp:
         mainui.do_exit()
 
     def thproc_mainloop(self):
+        mainq = mainui.mainq
         while 1:
             try:
                 msgtype, *argv = mainq.get(block=True)
@@ -166,8 +168,8 @@ if __name__ == '__main__':
 
 
     class MainUi(TkYzwMainUi):
-        def __init__(self, *la, **ka):
-            super().__init__(*la, **ka)
+        def __init__(self):
+            super().__init__(title="mainui demo", geometry='800x500+200+200')
             fr = self.root
             w = tk.Label(fr, text="clickme", font="Î¢ÈíÑÅºÚ 28 bold");
             w.pack(side="top", fill="both", expand=1)
