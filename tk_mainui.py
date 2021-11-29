@@ -106,9 +106,8 @@ class TkYzwMainUi:
         self.on_root_destroy()
         self.root.destroy()
 
-    def on_callback(self, callbackid, widget, *la, **ka):
-        # print(f"MainUi.on_callback {time.time()} a={widget, la, ka}")
-        self.mainq.put(("ui", [callbackid, widget, la, ka]))
+    def on_callback(self, callbackid, *la, **ka):
+        self.mainq.put(("ui", callbackid, la, ka))
 
     def run(self):
         if self.enable_on_idle:
@@ -128,7 +127,9 @@ class TkYzwMainUi:
 
 
 class TkYzwMainUiApp:
-    def __init__(self):
+    def __init__(self, mainui:TkYzwMainUi):
+        self.mainui = mainui
+        self.mainq = mainui.mainq
         threading.Thread(target=self.thproc_mainloop, args=(), daemon=True).start()
         # self.ui_dispatcher = {
         #     "demo_bind": self.on_ui_demo_bind,
@@ -136,11 +137,11 @@ class TkYzwMainUiApp:
         #     "exit": self.on_ui_exit
         # }
 
-    def on_ui_exit(self, widget, *la, **ka):
-        mainui.do_exit()
+    def on_ui_exit(self, *la, **ka):
+        self.mainui.do_exit()
 
     def thproc_mainloop(self):
-        mainq = mainui.mainq
+        mainq = self.mainq
         while 1:
             try:
                 msgtype, *argv = mainq.get(block=True)
@@ -148,10 +149,10 @@ class TkYzwMainUiApp:
                 traceback.print_exc()
                 continue
             if msgtype == 'ui':
-                callbackid, widget, la, ka = argv[0]
+                callbackid, la, ka = argv
                 # mainui.mainui_dispatch(argv[0], self.ui_dispatcher)
                 func = getattr(self, f"on_ui_{callbackid}")
-                if func: func(widget, *la, **ka)
+                if func: func(*la, **ka)
             else:
                 self.on_mainq(msgtype, *argv)
 
@@ -173,33 +174,29 @@ if __name__ == '__main__':
             fr = self.root
             w = tk.Label(fr, text="clickme", font="Î¢ÈíÑÅºÚ 28 bold");
             w.pack(side="top", fill="both", expand=1)
-            w.bind("<Double-1>",
-                   lambda *la, **ka: self.on_callback("demo_bind", w, *la, **ka))
+            w.bind("<Double-1>", lambda event: self.on_callback("demo_bind_double1", event))
 
             opm_list = ['Python', 'PHP', 'CPP', 'C', 'Java', 'JavaScript', 'VBScript']
             self.uiv_opm = tk.StringVar(value=opm_list[0])
-            w = tk.OptionMenu(fr, self.uiv_opm, *opm_list,
-                              command=lambda *la, **ka: self.on_callback("demo_command", w, *la, **ka))
+            w = tk.OptionMenu(fr, self.uiv_opm, *opm_list, command=lambda v: self.on_callback("demo_command_option_menu", v))
             w.pack(side="top", padx=10, pady=5)
-            self.uix_opm = w
+            self.uix_om = w
 
             w = tk.Button(fr, text="exit", fg="red",
-                          command=lambda *la, **ka: self.on_callback("exit", w, *la, **ka))
+                          command=lambda: self.on_callback("exit"))
             w.pack(side="top", padx=10, pady=5)
 
 
     class MainApp(TkYzwMainUiApp):
-        def __init__(self):
-            super().__init__()
+        def __init__(self, mainui:TkYzwMainUi):
+            super().__init__(mainui)
             threading.Thread(target=thproc_timer, args=(), daemon=True).start()
 
-        def on_ui_demo_bind(self, widget, *la, **ka):
-            print(f"demo_bind: widget={widget}, la={la} ka={ka}")
-            event, *_ = la
-            print(f"    event={event}")
+        def on_ui_demo_bind_double1(self, event):
+            print(f"on_ui_demo_bind_double1: event={event}")
 
-        def on_ui_demo_command(self, widget, *la, **ka):
-            print(f"demo_command: widget={widget}, la={la} ka={ka}")
+        def on_ui_demo_command_option_menu(self, v):
+            print(f"on_ui_demo_command_option_menu {v}")
 
         def on_mainq(self, msgtype, *argv):
             if msgtype == 'timer':
@@ -214,6 +211,6 @@ if __name__ == '__main__':
 
     mainui = MainUi()
     mainq = mainui.mainq
-    mainapp = MainApp()
+    mainapp = MainApp(mainui)
     mainui.run()
     print("bye")

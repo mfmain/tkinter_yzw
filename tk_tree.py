@@ -31,11 +31,17 @@ def list_get(a:list, i:int, default:any):
 
 
 class TkYzwFrameTree(tk.Frame):
-    def __init__(self, master, column_list, width_list:list=None, command=None, heading_command=None, scroll="", show=None, **kw):
+    def __init__(self, master, column_list, width_list:list=None, command=None, on_select=None, heading_command=None, scroll="", show=None, **kw):
         """
         column_list = [("tag", 120), ("desc,w", "100,w+"), ("列名,列名anchor", "列宽,内容行anchor")]
         show="tree" 无抬头栏；  show="headings" 有抬头  # 无抬头无法拉伸单列的列宽
+        command: 双击某个节点时调用，同时on_select也会被调用
+        on_select: 单击某个节点时调用
+        heading_command： 单击抬头时调用
         """
+
+        self.cb_command = command
+        self.cb_on_select = on_select
 
         super().__init__(master, **kw)
         self.master = master
@@ -105,10 +111,9 @@ class TkYzwFrameTree(tk.Frame):
         tree.tag_configure('green', foreground='green')
         tree.tag_configure('grey', foreground='grey')
 
-        # tree.bind("<Double-1>", self.on_tree_double1)      # double click
+        tree.bind("<Double-1>", self._on_tree_double1)      # double click
         # tree.bind("<ButtonRelease-1>", self.on_tree_release1)  # single click, 不能使用<Button-1>,会取到鼠标点击前的状态
         # tree.bind("<<TreeviewSelect>>", self.on_tree_select)  # 一定能取到selection, 不会"index out of range"
-        self.cb_command = command
         tree.bind("<<TreeviewSelect>>", self.__on_tree_select)
 
         fr.columnconfigure(0, weight=1)
@@ -135,7 +140,6 @@ class TkYzwFrameTree(tk.Frame):
         self.bind("<Control-c>", self.on_key_ctrl_c)
         self.bind("<Control-a>", self.on_key_ctrl_a)
 
-
     def bind(self, sequence, func):
         self.wx.bind(sequence, func)
 
@@ -159,9 +163,14 @@ class TkYzwFrameTree(tk.Frame):
         self.wx.selection_set(a_iid)
 
     def __on_tree_select(self, event):
+        if self.cb_on_select:
+            iids = self.wx.selection()  # type: tuple
+            if iids: self.cb_on_select(iids[0], event)
+
+    def _on_tree_double1(self, event):
         if self.cb_command:
             iids = self.wx.selection()  # type: tuple
-            if iids: self.cb_command(iids[0])
+            if iids: self.cb_command(iids[0], event)
 
     def dump_selection(self):
         print("dump_selection:")
@@ -193,10 +202,6 @@ class TkYzwFrameTree(tk.Frame):
         for child in children:
             children += get_all_children(self.wx, child)
         return children
-
-    def on_tree_double1(self, event):
-        print('on_tree_double1(%r):' % event)  #> <ButtonPress event state=Mod1 num=1 x=264 y=118>
-        self.dump_selection()
 
     def on_tree_release1(self, event):
         print('on_tree_release1(%r):' % event)  #> <ButtonRelease event state=Control|Mod1|Button1 num=1 x=199 y=176>
@@ -505,7 +510,7 @@ if __name__ == '__main__':
             # column_list = ["tag", "时间", "来源", "分类", "信息,w"]
             # width_list = [120, 100, 100, "50:100,w", "100,w+"]
             column_list = [("tag", 120), ("时间", 100), ("来源", 100), ("分类","50:100,w"), ("信息,w", "100,w+")]
-            ui_tree = TkYzwFrameTree(self.root, column_list, scroll="xy", height=10, command=self.on_command, heading_command=self.on_heading)
+            ui_tree = TkYzwFrameTree(self.root, column_list, scroll="xy", height=10, on_select=self.on_select, command=self.on_command, heading_command=self.on_heading)
             # show="tree" 无抬头栏(无法拖拽列宽)；  show="headings" 有抬头
             self.ui_tree = ui_tree
             #ui_tree.wx.column('#0', stretch="no", minwidth=0, width=0)
@@ -525,7 +530,6 @@ if __name__ == '__main__':
             # ui_tree.wx.heading('c4', text='信息', anchor='w')   使用,w后缀实现
             # ui_tree.wx.column('c4', width=100, stretch=1, anchor='w')  使用,w+后缀实现
 
-            ui_tree.wx.bind("<Double-1>", self.on_tree_d1)
             ui_tree.pack(side="top", fill="both", expand=1)
 
         def on_btn_easy(self):
@@ -564,17 +568,12 @@ if __name__ == '__main__':
         def on_heading(self, col:str):
             print("on_heading %s"%col)
 
-        def on_command(self, event):
+        def on_select(self, iid:str, event):
             self.ui_tree.dump_selection()
 
-        def on_tree_d1(self, event):
+        def on_command(self, iid:str, event):
             tree = self.ui_tree.wx
-            sel = tree.selection()  # type: tuple
-            if not sel:
-                print("no sel")
-                return
-            item = sel[0] # 选择的iid
-            print("you clicked on ", tree.item(item, "values")) # tuple
+            print("on_command ", tree.item(iid, "values")) # tuple
             rowiid = tree.identify_row(event.y)  # > iid I001 I002 I003 ...
             column = tree.identify_column(event.x)  # > #1 #2 #3 ...
             # treeview也相当于一张表格(不包含headings)

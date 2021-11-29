@@ -9,8 +9,9 @@ from collections import defaultdict
 import tkinter as tk
 from tkinter.filedialog import askdirectory
 from tkinter_yzw.tk_tree import TkYzwFrameTree
-from tkinter_yzw.tk_mainui import TkYzwMainUi
+from tkinter_yzw.tk_mainui import TkYzwMainUi, TkYzwMainUiApp
 import win32api
+import subprocess
 # from PIL import Image
 # import cv2
 
@@ -178,9 +179,10 @@ class MainUi(TkYzwMainUi):
     def __init__(self):
         super().__init__(title="newpp", geometry='800x500+200+200')
         w = TkYzwFrameTree(self.root, column_list=[("源文件,w", 300), ("目的文件,w", "100,w+")], scroll="xy", height=10,
-                                 command=lambda *la, **ka: self.on_callback("tree_command", w, *la, **ka))
+                                 command=lambda iid, event: self.on_callback("tree_command", iid, event))
         w.pack(side="top", fill="both", expand=1)
         self.ui_tree = w
+        self.ui_tree.bind("<Button-3>", lambda event: self.on_callback("tree_menu", event))
 
         self.ui_tree.easy_insert("", "原始时间", index="end", open=True, tags="h1")
         self.ui_tree.easy_insert("", "图片时间", index="end", open=True, tags="h1")
@@ -189,11 +191,10 @@ class MainUi(TkYzwMainUi):
         self.ui_tree.easy_insert("", "same", index="end", open=False, tags="h1")
 
 
-class MainApp:
-    def __init__(self):
+class MainApp(TkYzwMainUiApp):
+    def __init__(self, mainui:TkYzwMainUi):
+        super().__init__(mainui)
         self.d_tn_cnt = defaultdict(int)
-
-        threading.Thread(target=self.mainloop, args=(), daemon=True).start()
         threading.Thread(target=self.main_newpp, args=(), daemon=True).start()
 
     def main_newpp(self):
@@ -206,31 +207,42 @@ class MainApp:
             mainui.ui_tree.easy_item(tn, text=f"{tn}({self.d_tn_cnt[tn]})")
             mainui.ui_tree.easy_insert(tn, filepath_src, value=(filepath_dst,))
 
-    def on_ui_tree_command(self, w, iid:str, **ka):
-        print(f"on_ui_tree_command: w={w}, iid={iid}, ka={ka}")
+    def on_ui_tree_command(self, iid, event):
+        print(f"on_ui_tree_command: iid={iid}, event={event}")
         try:
             tn, filepath_src = iid.split("/", maxsplit=1)
             print(f"open {repr(filepath_src)}")
         except:
             return
 
+        print("img_show", filepath_src)
         img_show(filepath_src)
 
-    def mainloop(self):
-        while 1:
-            try:
-                msgtype, *argv = mainq.get(block=True)
-            except:
-                traceback.print_exc()
-                continue
-            if msgtype == 'ui':
-                callbackid, widget, la, ka = argv[0]
-                func = getattr(self, f"on_ui_{callbackid}")
-                if func: func(widget, *la, **ka)
-            elif msgtype == 'timer':
-                print("timer")
-            else:
-                print(f"{msgtype} {msga}")
+    def on_ui_tree_menu(self, event):
+        mainui = self.mainui
+        # print(f"on_ui_tree_menu: event={event}")
+        a_iid = mainui.ui_tree.wx.selection()
+        # print(a_iid)
+        if not a_iid: return
+        menubar = tk.Menu(self.mainui.ui_tree)
+        menubar.add_command(label="copy to", command=lambda : mainui.on_callback("tree_copy_to", a_iid))
+        menubar.add_command(label="delete", command=lambda: mainui.on_callback("tree_delete", a_iid))
+        menubar.add_command(label="explorer", command=lambda: mainui.on_callback("tree_explorer", a_iid[0]))
+        menubar.post(event.x_root, event.y_root)
+
+    def on_ui_tree_copy_to(self, a_iid):
+        print("on_ui_tree_copy_to", a_iid)
+
+    def on_ui_tree_delete(self, a_iid):
+        print("on_ui_tree_delete", a_iid)
+
+    def on_ui_tree_explorer(self, iid):
+        print("on_ui_tree_explorer", iid)
+        tn, fn = iid.split("/", maxsplit=1)
+        subprocess.call(fr'explorer /select,"{fn}"')
+
+    def on_mainq(self, msgtype, *argv):
+        print(f"{msgtype} {argv}")
 
 
 if __name__=="__main__":
@@ -241,7 +253,7 @@ if __name__=="__main__":
 
     mainui = MainUi()
     mainq = mainui.mainq
-    mainapp = MainApp()
+    mainapp = MainApp(mainui)
     mainui.run()
 
     sta.show()
