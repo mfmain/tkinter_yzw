@@ -15,8 +15,6 @@ import yaml
 import tkinter as tk
 
 
-
-
 def _yaml_load(fn, encoding=None, default=None):
     if default is None:
         default = dict()
@@ -36,9 +34,15 @@ class TkYzwMainUi:
 
     def __init__(self, title=None, font='微软雅黑 9', icon_fn="", bg=None, geometry=None, topmost=False, layout=None, mainq=None, enable_on_idle=False):
         """
+        param mainq:
+            如果传入空，将生成一个self.mainq，供外部引用
         param layout:
-            str:  filename of layout, autosave layout when closed
-            dict: dict of layout
+            str:  如果是字符串类型，将解释为文件名，并启动layout的自动保存机制
+            dict: layout参数字典
+        param enable_on_idle：
+            如果是True，则提供回调函数self.on_idle，因为会付出一定的代价，所以缺省为False
+            如果为False，即便重载了self.on_idle，也不会被调用
+            注意self.on_dile执行期间，界面将得不到响应，所以必须尽快完成，禁止阻塞
         """
         self.root = tk.Tk()
         if mainq is None:
@@ -161,17 +165,15 @@ if __name__ == '__main__':
             #     "exit": self.on_ui_exit
             # }
 
-        def on_ui_demo_bind(self, *la, **ka):
-            print(f"demo_bind: la={la} ka={ka}")
-            widget, event, *_ = la
-            print(f"    widget={widget} event={event}")
+        def on_ui_demo_bind(self, widget, *la, **ka):
+            print(f"demo_bind: widget={widget}, la={la} ka={ka}")
+            event, *_ = la
+            print(f"    event={event}")
 
-        def on_ui_demo_command(self, *la, **ka):
-            print(f"demo_command: la={la} ka={ka}")
-            widget, *_ = la
-            print(f"    widget={widget}")
+        def on_ui_demo_command(self, widget, *la, **ka):
+            print(f"demo_command: widget={widget}, la={la} ka={ka}")
 
-        def on_ui_exit(self, *la, **ka):
+        def on_ui_exit(self, widget, *la, **ka):
             mainui.do_exit()
 
         def thproc_mainloop(self):
