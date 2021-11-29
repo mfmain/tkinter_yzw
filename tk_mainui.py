@@ -126,6 +126,37 @@ class TkYzwMainUi:
             func(widget, *la, **ka)
 
 
+class TkYzwMainUiApp:
+    def __init__(self):
+        threading.Thread(target=self.thproc_mainloop, args=(), daemon=True).start()
+        # self.ui_dispatcher = {
+        #     "demo_bind": self.on_ui_demo_bind,
+        #     "demo_command": self.on_ui_demo_command,
+        #     "exit": self.on_ui_exit
+        # }
+
+    def on_ui_exit(self, widget, *la, **ka):
+        mainui.do_exit()
+
+    def thproc_mainloop(self):
+        while 1:
+            try:
+                msgtype, *argv = mainq.get(block=True)
+            except:
+                traceback.print_exc()
+                continue
+            if msgtype == 'ui':
+                callbackid, widget, la, ka = argv[0]
+                # mainui.mainui_dispatch(argv[0], self.ui_dispatcher)
+                func = getattr(self, f"on_ui_{callbackid}")
+                if func: func(widget, *la, **ka)
+            else:
+                self.on_mainq(msgtype, *argv)
+
+    def on_mainq(self, msgtype, *argv):
+        print(f"{msgtype} {msga}")
+
+
 if __name__ == '__main__':
 
     def thproc_timer():
@@ -155,15 +186,10 @@ if __name__ == '__main__':
             w.pack(side="top", padx=10, pady=5)
 
 
-    class MainApp:
+    class MainApp(TkYzwMainUiApp):
         def __init__(self):
-            threading.Thread(target=self.thproc_mainloop, args=(), daemon=True).start()
+            super().__init__()
             threading.Thread(target=thproc_timer, args=(), daemon=True).start()
-            # self.ui_dispatcher = {
-            #     "demo_bind": self.on_ui_demo_bind,
-            #     "demo_command": self.on_ui_demo_command,
-            #     "exit": self.on_ui_exit
-            # }
 
         def on_ui_demo_bind(self, widget, *la, **ka):
             print(f"demo_bind: widget={widget}, la={la} ka={ka}")
@@ -173,25 +199,11 @@ if __name__ == '__main__':
         def on_ui_demo_command(self, widget, *la, **ka):
             print(f"demo_command: widget={widget}, la={la} ka={ka}")
 
-        def on_ui_exit(self, widget, *la, **ka):
-            mainui.do_exit()
-
-        def thproc_mainloop(self):
-            while 1:
-                try:
-                    msgtype, *argv = mainq.get(block=True)
-                except:
-                    traceback.print_exc()
-                    continue
-                if msgtype == 'ui':
-                    callbackid, widget, la, ka = argv[0]
-                    # mainui.mainui_dispatch(argv[0], self.ui_dispatcher)
-                    func = getattr(self, f"on_ui_{callbackid}")
-                    if func: func(widget, *la, **ka)
-                elif msgtype == 'timer':
-                    print("timer")
-                else:
-                    print(f"{msgtype} {msga}")
+        def on_mainq(self, msgtype, *argv):
+            if msgtype == 'timer':
+                print("timer")
+            else:
+                print(f"{msgtype} {msga}")
 
 
 if __name__ == '__main__':
