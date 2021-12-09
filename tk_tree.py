@@ -537,6 +537,7 @@ if __name__ == '__main__':
             wx.easy_insert("", _iid='a', values=('a',), tags="h1")
             wx.easy_insert("", _iid='A', values=('A',), tags=["h1", "red"])
             wx.easy_insert("a/b/c", _iid='d', values=('abcd',), sorted_key='')
+            wx.easy_insert("a/b/c", _iid='d', values=('ABCD',), sorted_key='')  # 修改已存在的path
             wx.easy_insert("1/2/3/4", _iid='5', values=('12345',))
             wx.easy_insert("a/b/c", text='x', values=('x',), sorted_key='x')
             wx.easy_insert("a/b/c", text='y', values=('y',), sorted_key='y')
