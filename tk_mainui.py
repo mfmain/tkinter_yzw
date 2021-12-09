@@ -40,19 +40,6 @@ class TkYzwMainUi:
         param layout:
             str:  如果是字符串类型，将解释为文件名，并启动layout的自动保存机制
             dict: layout参数字典
-
-        removed param enable_on_idle=None, idletimers=None
-
-        # param enable_on_idle：None or float
-        #     experimental feature: 每次idle时sleep的时间
-        #     缺省为None，即不启用idle机制，即便重载了self.on_idle，也不会被调用
-        #     enable_on_idle指定为0.01，则每秒最多调用100次，取决是界面的复杂程度，依次类推，0.001则最多调用1000次
-        #     注意self.on_idle执行期间，界面将得不到响应，所以必须尽快完成，禁止阻塞
-        # param timers：None or list of float
-        #     experimental feature: 如果没有打开enable_on_idle，会自动打开enable_on_idle=0.01
-        #     定时器时长列表，单位为秒，浮点数，
-        #     该定时器，基于idle的lazy判断，所以不保证实时性和精度，不补足错过的次数，精度依赖enable_on_idle指定的时间
-        #     要实现精确的定时器，可自行构造一个独立的线程发送定时器消息给q
         """
         self.root = tk.Tk()
         if mainq is None:
@@ -85,15 +72,6 @@ class TkYzwMainUi:
         if geometry:
             self.root.geometry(geometry)
 
-        # if isinstance(idletimers, list) and len(idletimers) > 0:
-        #     if enable_on_idle is None: enable_on_idle = 0.01
-        #     t = time.time()
-        #     self.a_timercycle = idletimers
-        #     self.a_timerlast = [t] * len(idletimers)
-        # else:
-        #     self.a_timercycle = []
-        #
-        # self.enable_on_idle = enable_on_idle
         self.after_id = None
 
         self.root_destroyed = False
@@ -101,9 +79,6 @@ class TkYzwMainUi:
 
     def after(self, ms:int, func):
         self.after_id = self.root.after(ms, func)
-
-    def on_idle(self):
-        pass
 
     def on_root_destroy(self):
         pass
@@ -140,14 +115,7 @@ class TkYzwMainUi:
     #         while not self.root_destroyed:
     #             self.root.update_idletasks()  # 只更新屏幕,不处理event和callback
     #             self.root.update()  # 绝不能从callback中调用update
-    #             self.mainq.put(("idle"))
-    #
-    #             time.sleep(self.enable_on_idle)
-    #             t = time.time()
-    #             for i, cycle in enumerate(self.a_timercycle):
-    #                 if t - self.a_timerlast[i] > cycle:
-    #                     self.a_timerlast[i] = t
-    #                     self.mainq.put(("idletimer", cycle))
+    #             self.on_idle()  # 执行期间，界面将得不到响应，必须尽快退出
     #     else:
     #         self.root.mainloop()
 
@@ -164,6 +132,16 @@ class TkYzwMainUi:
 
 class TkYzwMainUiApp:
     def __init__(self, mainui:TkYzwMainUi, enable_idle=None, idle_timers=None):
+        """
+        # param enable_idle：None or float
+        #     idle多长时间触发on_idle
+        #     缺省为None，即不启用idle机制，即便重载了self.on_idle，也不会被调用
+        # param timers：None or list of float
+        #     如果没有打开enable_idle，会自动打开enable_idle=0.01
+        #     可设置多个定时器，idle_timers=定时器时长列表，单位为秒，浮点数，
+        #     该定时器，基于idle的lazy判断，所以不保证实时性，系统没事干的时候才会触发，一直忙则一直不触发，精度依赖enable_idle参数
+        #     要实现精确的定时器，可自行构造一个独立的线程发送定时器消息给q
+        """
         self.mainui = mainui
         self.mainq = mainui.mainq
         threading.Thread(target=self.thproc_mainloop, args=(enable_idle, idle_timers), daemon=True).start()
@@ -249,11 +227,6 @@ if __name__ == '__main__':
             w = tk.Button(fr, text="exit", fg="red",
                           command=lambda: self.on_callback("exit"))
             w.pack(side="top", padx=10, pady=5)
-        #     self.on_idle_cnt = 0
-        #
-        # def on_idle(self):
-        #     self.on_idle_cnt += 1
-        #     # print(f"on_idle {self.on_idle_cnt}")
 
     class MainApp(TkYzwMainUiApp):
         def __init__(self, mainui:TkYzwMainUi, enable_idle=None, idle_timers=None):
