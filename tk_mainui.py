@@ -33,17 +33,26 @@ def _yaml_load(fn, encoding=None, default=None):
 class TkYzwMainUi:
     self = None  # ready mark
 
-    def __init__(self, title=None, font='微软雅黑 9', icon_fn="", bg=None, geometry=None, topmost=False, layout=None, mainq=None, enable_on_idle=False):
+    def __init__(self, title=None, font='微软雅黑 9', icon_fn="", bg=None, geometry=None, topmost=False, layout=None, mainq=None):
         """
         param mainq:
             如果传入空，将生成一个self.mainq，供外部引用
         param layout:
             str:  如果是字符串类型，将解释为文件名，并启动layout的自动保存机制
             dict: layout参数字典
-        param enable_on_idle：
-            如果是True，则提供回调函数self.on_idle，因为会付出一定的代价，所以缺省为False
-            如果为False，即便重载了self.on_idle，也不会被调用
-            注意self.on_dile执行期间，界面将得不到响应，所以必须尽快完成，禁止阻塞
+
+        removed param enable_on_idle=None, idletimers=None
+
+        # param enable_on_idle：None or float
+        #     experimental feature: 每次idle时sleep的时间
+        #     缺省为None，即不启用idle机制，即便重载了self.on_idle，也不会被调用
+        #     enable_on_idle指定为0.01，则每秒最多调用100次，取决是界面的复杂程度，依次类推，0.001则最多调用1000次
+        #     注意self.on_idle执行期间，界面将得不到响应，所以必须尽快完成，禁止阻塞
+        # param timers：None or list of float
+        #     experimental feature: 如果没有打开enable_on_idle，会自动打开enable_on_idle=0.01
+        #     定时器时长列表，单位为秒，浮点数，
+        #     该定时器，基于idle的lazy判断，所以不保证实时性和精度，不补足错过的次数，精度依赖enable_on_idle指定的时间
+        #     要实现精确的定时器，可自行构造一个独立的线程发送定时器消息给q
         """
         self.root = tk.Tk()
         if mainq is None:
@@ -76,9 +85,19 @@ class TkYzwMainUi:
         if geometry:
             self.root.geometry(geometry)
 
-        self.self = self  # ready
-        self.enable_on_idle = enable_on_idle
+        # if isinstance(idletimers, list) and len(idletimers) > 0:
+        #     if enable_on_idle is None: enable_on_idle = 0.01
+        #     t = time.time()
+        #     self.a_timercycle = idletimers
+        #     self.a_timerlast = [t] * len(idletimers)
+        # else:
+        #     self.a_timercycle = []
+        #
+        # self.enable_on_idle = enable_on_idle
         self.after_id = None
+
+        self.root_destroyed = False
+        self.self = self  # ready
 
     def after(self, ms:int, func):
         self.after_id = self.root.after(ms, func)
@@ -104,19 +123,36 @@ class TkYzwMainUi:
                 self.on_save_layout(f)
 
         self.on_root_destroy()
-        self.root.destroy()
+        try:
+            self.root.destroy()  # destory all widgets
+        except RuntimeError:
+            # main thread is not in main loop:
+            pass
+        self.root.quit()  # quit mainloop even if destroy() failed
+        self.root_destroyed = True
 
     def on_callback(self, callbackid, *la, **ka):
         self.mainq.put(("ui", callbackid, la, ka))
 
+    # def run(self):
+    #     if self.enable_on_idle:
+    #         # 这里将构造一个死循环，主线程CPU 100%，谨慎打开这个功能
+    #         while not self.root_destroyed:
+    #             self.root.update_idletasks()  # 只更新屏幕,不处理event和callback
+    #             self.root.update()  # 绝不能从callback中调用update
+    #             self.mainq.put(("idle"))
+    #
+    #             time.sleep(self.enable_on_idle)
+    #             t = time.time()
+    #             for i, cycle in enumerate(self.a_timercycle):
+    #                 if t - self.a_timerlast[i] > cycle:
+    #                     self.a_timerlast[i] = t
+    #                     self.mainq.put(("idletimer", cycle))
+    #     else:
+    #         self.root.mainloop()
+
     def run(self):
-        if self.enable_on_idle:
-            while True:
-                tk.update_idletasks()  # 只更新屏幕,不处理event和callback
-                tk.update()  # 绝不能从callback中调用update
-                self.on_idle()
-        else:
-            self.root.mainloop()
+        self.root.mainloop()
 
     def mainui_dispatch(self, msga: tuple, ui_dispatcher:dict):
         callbackid, widget, la, ka = msga
@@ -127,10 +163,10 @@ class TkYzwMainUi:
 
 
 class TkYzwMainUiApp:
-    def __init__(self, mainui:TkYzwMainUi):
+    def __init__(self, mainui:TkYzwMainUi, enable_idle=None, idle_timers=None):
         self.mainui = mainui
         self.mainq = mainui.mainq
-        threading.Thread(target=self.thproc_mainloop, args=(), daemon=True).start()
+        threading.Thread(target=self.thproc_mainloop, args=(enable_idle, idle_timers), daemon=True).start()
         # self.ui_dispatcher = {
         #     "demo_bind": self.on_ui_demo_bind,
         #     "demo_command": self.on_ui_demo_command,
@@ -140,24 +176,52 @@ class TkYzwMainUiApp:
     def on_ui_exit(self, *la, **ka):
         self.mainui.do_exit()
 
-    def thproc_mainloop(self):
+    def thproc_mainloop(self, enable_idle=None, idletimers=None):
         mainq = self.mainq
+
+        if isinstance(idletimers, list) and len(idletimers) > 0:
+            if enable_idle is None: enable_idle = 0.01
+            t = time.time()
+            a_timercycle = idletimers
+            a_timerlast = [t] * len(idletimers)
+        else:
+            a_timercycle = []
+
         while 1:
             try:
-                msgtype, *argv = mainq.get(block=True)
+                msgtype, *argv = mainq.get(block=True, timeout=enable_idle)
+            except queue.Empty:
+                # timeout
+                self.on_idle()
+                t = time.time()
+                for i, cycle in enumerate(a_timercycle):
+                    if t - a_timerlast[i] > cycle:
+                        a_timerlast[i] = t
+                        self.on_idle_timer(cycle)
+                continue
             except:
                 traceback.print_exc()
                 continue
+
             if msgtype == 'ui':
                 callbackid, la, ka = argv
                 # mainui.mainui_dispatch(argv[0], self.ui_dispatcher)
                 func = getattr(self, f"on_ui_{callbackid}")
                 if func: func(*la, **ka)
+            elif msgtype == 'idletimer':
+                self.on_idle_timer(argv[0])
             else:
                 self.on_mainq(msgtype, *argv)
 
     def on_mainq(self, msgtype, *argv):
         print(f"{msgtype} {msga}")
+
+    def on_idle(self):
+        # print("idle")
+        pass
+
+    def on_idle_timer(self, cycle:float):
+        print(f"idle_timer {cycle}")
 
 
 if __name__ == '__main__':
@@ -185,11 +249,15 @@ if __name__ == '__main__':
             w = tk.Button(fr, text="exit", fg="red",
                           command=lambda: self.on_callback("exit"))
             w.pack(side="top", padx=10, pady=5)
-
+        #     self.on_idle_cnt = 0
+        #
+        # def on_idle(self):
+        #     self.on_idle_cnt += 1
+        #     # print(f"on_idle {self.on_idle_cnt}")
 
     class MainApp(TkYzwMainUiApp):
-        def __init__(self, mainui:TkYzwMainUi):
-            super().__init__(mainui)
+        def __init__(self, mainui:TkYzwMainUi, enable_idle=None, idle_timers=None):
+            super().__init__(mainui, enable_idle, idle_timers)
             threading.Thread(target=thproc_timer, args=(), daemon=True).start()
 
         def on_ui_demo_bind_double1(self, event):
@@ -200,17 +268,17 @@ if __name__ == '__main__':
 
         def on_mainq(self, msgtype, *argv):
             if msgtype == 'timer':
-                print("timer")
+                # print(f"timer {mainui.on_idle_cnt}")
+                print(f"timer")
             else:
                 print(f"{msgtype} {msga}")
 
 
-if __name__ == '__main__':
     import threading
     import time
 
     mainui = MainUi()
     mainq = mainui.mainq
-    mainapp = MainApp(mainui)
+    mainapp = MainApp(mainui, idle_timers=[0.5, 3])
     mainui.run()
     print("bye")
