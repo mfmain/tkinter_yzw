@@ -8,6 +8,7 @@
 
 
 import os
+import time
 import chardet
 import queue
 import traceback
@@ -186,8 +187,6 @@ class TkYzwMainUiApp:
                 # mainui.mainui_dispatch(argv[0], self.ui_dispatcher)
                 func = getattr(self, f"on_ui_{callbackid}")
                 if func: func(*la, **ka)
-            elif msgtype == 'idletimer':
-                self.on_idle_timer(argv[0])
             else:
                 self.on_mainq(msgtype, *argv)
 
