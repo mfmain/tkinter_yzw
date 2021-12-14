@@ -229,7 +229,13 @@ class TkYzwFrameTree(tk.Frame):
 
     def do_deltree(self, iid:str):
         for i in self.iter_children(iid):
-            self.delete(i)
+            if i in self.all_user_defined_iids:
+                self.all_user_defined_iids.discard(i)
+
+        try:
+            self.wx.delete(iid)  # 删除本身及其子节点
+        except:
+            pass
 
         # if include:
         #     # 删除本身及其子节点
