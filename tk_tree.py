@@ -218,15 +218,18 @@ class TkYzwFrameTree(tk.Frame):
         self.all_user_defined_iids = set()
         self.d_piid_a_sortkey = defaultdict(SortedList)  # 为实现sorted_key排序插入
 
-    def do_deltree(self, iid:str):
-        for i in self.iter_children(iid):
-            if i in self.all_user_defined_iids:
-                self.all_user_defined_iids.discard(i)
+    def delete(self, iid:str):
+        if iid in self.all_user_defined_iids:
+            self.all_user_defined_iids.discard(iid)
 
         try:
             self.wx.delete(iid)
         except:
             pass
+
+    def do_deltree(self, iid:str):
+        for i in self.iter_children(iid):
+            self.delete(i)
 
         # if include:
         #     # 删除本身及其子节点

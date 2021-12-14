@@ -143,8 +143,10 @@ class PhotoItem:
         self.filepath_src = filepath  # 源文件名，全路径
         self.tn = tn                  # 图片按时间的分类
         self.t = t                    # 图片的日期，用于新建子目录
-        self.dstdir = opt.dstdir + "\\" + t
+        self.dstdir = opt.dstdir + "\\" + t   # 用于比较的目的目录
         self.filepath_dst = os.path.join(self.dstdir, filename)
+        self.todir = opt.todir  + "\\" + t    # 用于拷贝或移动的目的目录
+        self.filepath_to = os.path.join(self.todir, filename)
 
 
 def iter_srcdir(srcdir):
@@ -158,20 +160,7 @@ def iter_srcdir(srcdir):
                 print("\t%s ignored" % filepath)
                 sta.ignored += 1
                 continue
-            # filepath = os.path.join(root, filename)
-            # exif = get_exif(filepath)
-            # tn = '原始时间'
-            # t = t_exif(exif, 'EXIF DateTimeOriginal')
-            # if not t:
-            #     tn = '图片时间'
-            #     t = t_exif(exif, 'Image DateTime')
-            # if not t:
-            #     tn = '文件名时间'
-            #     t = t_filename(filename)
-            # if not t:
-            #     tn = '文件时间戳'
-            #     t = t_filetime(filepath)
-            # #move_photo_fd(filepath, filename, t, tn)
+            #move_photo_fd(filepath, filename, t, tn)
             yield PhotoItem(root, filename)
         if not opt.depth: break # 不遍历子目录
 
@@ -209,7 +198,7 @@ def is_same(fn1, fn2):
 class MainUi(TkYzwMainUi):
     def __init__(self):
         super().__init__(title="newpp", geometry='800x500+200+200')
-        w = TkYzwFrameTree(self.root, column_list=[("源文件,w", 300), ("目的文件,w", "100,w+")], scroll="xy", height=10,
+        w = TkYzwFrameTree(self.root, column_list=[("源文件,w", 300), ("目的文件夹,w", "100,w+")], scroll="xy", height=10,
                                  command=lambda iid, event: self.on_callback("tree_command", iid, event))
         w.pack(side="top", fill="both", expand=1)
         self.ui_tree = w
@@ -226,6 +215,7 @@ class MainApp(TkYzwMainUiApp):
     def __init__(self, mainui:TkYzwMainUi):
         super().__init__(mainui)
         self.d_tn_cnt = defaultdict(int)
+        self.d_iid_pi = dict()
         threading.Thread(target=self.main_newpp, args=(), daemon=True).start()
 
     def main_newpp(self):
@@ -235,8 +225,11 @@ class MainApp(TkYzwMainUiApp):
             if is_same(pi.filepath_src, pi.filepath_dst):
                 pi.tn = "same"
             self.d_tn_cnt[pi.tn] += 1
+            iid = f"{pi.tn}/{pi.filepath_src}"
+            self.d_iid_pi[iid] = pi
             mainui.ui_tree.easy_item(pi.tn, text=f"{pi.tn}({self.d_tn_cnt[pi.tn]})")
-            mainui.ui_tree.easy_insert(pi.tn, pi.filepath_src, value=(pi.filepath_dst,))
+            # mainui.ui_tree.easy_insert(pi.tn, pi.filepath_src, value=(pi.dstdir,))
+            mainui.ui_tree.easy_item(iid, value=(pi.dstdir,))
 
     def on_ui_tree_command(self, iid, event):
         print(f"on_ui_tree_command: iid={iid}, event={event}")
@@ -288,15 +281,36 @@ class MainApp(TkYzwMainUiApp):
 
     def on_ui_tree_copy_to(self, a_iid):
         print("on_ui_tree_copy_to", a_iid)
-        self.do_fastcopy("diff", a_iid)
+        # self.do_fastcopy("diff", a_iid)
+        for iid in a_iid:
+            pi = self.d_iid_pi[iid]
+            print(f"copy {pi.filepath_src} {pi.todir}")
+            if not os.path.exists(pi.todir): os.mkdir(pi.todir)
+            shutil.copy2(pi.filepath_src, pi.todir)  # 用copy2会保留图片的原始属性
 
     def on_ui_tree_move_to(self, a_iid):
         print("on_ui_tree_move_to", a_iid)
-        self.do_fastcopy("move", a_iid)
+        # self.do_fastcopy("move", a_iid)
+        for iid in a_iid:
+            pi = self.d_iid_pi[iid]
+            print(f"move {pi.filepath_src} {pi.todir}")
+            if not os.path.exists(pi.todir): os.mkdir(pi.todir)
+            try:
+                shutil.move(pi.filepath_src, pi.todir)
+            except OSError as e:
+                # Destination path  already exists
+                print(e)
+
+            mainui.ui_tree.delete(iid)
 
     def on_ui_tree_delete(self, a_iid):
         print("on_ui_tree_delete", a_iid)
-        self.do_fastcopy("delete", a_iid)
+        # self.do_fastcopy("delete", a_iid)
+        for iid in a_iid:
+            pi = self.d_iid_pi[iid]
+            print(f"del {pi.filepath_src}")
+            os.unlink(pi.filepath_src)
+            mainui.ui_tree.delete(iid)
 
     def on_ui_tree_explorer(self, iid):
         print("on_ui_tree_explorer", iid)
