@@ -1,5 +1,9 @@
 # coding： gbk
 
+# DEBUGME:
+#    --to E:\w\newpp2 J:\DCIM\100CANON \\192.168.1.111\e\w\newpp
+#    --to \\192.168.1.111\e\w\newpp.to J:\DCIM\100CANON \\192.168.1.111\e\w\newpp
+
 import os, sys, time, shutil
 import exifread as exif
 import argparse
