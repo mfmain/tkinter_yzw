@@ -15,6 +15,8 @@ import subprocess
 # from PIL import Image
 # import cv2
 
+
+
 def img_show(fn):
     win32api.ShellExecute(0, 'open', fn, None, '.', 0)
 
@@ -53,12 +55,12 @@ class CSTA:
 
 def opt_parse(argv):
     parser = argparse.ArgumentParser(description='gather photoes')
-    parser.add_argument('srcdir',                  type=str,                  help='source dir')
-    parser.add_argument('dstdir',                  type=str,                  help='target dir')
-    # parser.add_argument('cmpdir',                  type=str,                  help='compare dir')
+    parser.add_argument('srcdir',                  type=str,                  help='compare srcdir')
+    parser.add_argument('dstdir',                  type=str,                  help='compare dstdir')
+    parser.add_argument('-t', "--todir",           type=str,                  help='copy/move to dir')
     parser.add_argument("-v", "--verbose",         action="count", default=0, help="increase output verbosity")
-    parser.add_argument("-n", "--dryrun",          action="store_true",       help="dry run")
-    parser.add_argument("-k", "--keepsame",        action="store_true",       help="keep source if dst exists")
+    # parser.add_argument("-n", "--dryrun",          action="store_true",       help="dry run")
+    # parser.add_argument("-k", "--keepsame",        action="store_true",       help="keep source if dst exists")
     parser.add_argument("-r", "--depth",           action="store_true",       help="no recursive")
     parser.add_argument("-c", "--content_compare", action="store_true",       help="compare whole content")
     return parser.parse_args(argv)
@@ -226,15 +228,46 @@ class MainApp(TkYzwMainUiApp):
         if not a_iid: return
         menubar = tk.Menu(self.mainui.ui_tree)
         menubar.add_command(label="copy to", command=lambda : mainui.on_callback("tree_copy_to", a_iid))
+        menubar.add_command(label="move to", command=lambda: mainui.on_callback("tree_move_to", a_iid))
         menubar.add_command(label="delete", command=lambda: mainui.on_callback("tree_delete", a_iid))
         menubar.add_command(label="explorer", command=lambda: mainui.on_callback("tree_explorer", a_iid[0]))
         menubar.post(event.x_root, event.y_root)
 
+    def _gen_fastcopy_srcfile(self, a_iid):
+        f = open("newpp_fastcopy.txt", "w", encoding="gbk")
+        for iid in a_iid:
+            _, fn = iid.split("/", maxsplit=1)
+            print(fn, file=f)
+        f.close()
+
+    def do_fastcopy(self, cmd:str, a_iid):
+        # C:\Users\yzw\FastCopy\FastCopy.exe
+        # https://fastcopy.jp/help/fastcopy_eng.htm#cmdline
+        #    /cmd=diff
+        #    /cmd=move
+        #    /cmd=delete
+        #    /auto_close	Close automatically after execution is finished with no errors.
+        #    /estimate	Estimate complete time.(to disable, /estimate=FALSE)
+        #    /no_exec
+        self._gen_fastcopy_srcfile(a_iid)
+        fastcopycmd = fr'C:\Users\yzw\FastCopy\FastCopy.exe /cmd={cmd} /estimate /no_exec /srcfile=newpp_fastcopy.txt'
+        if opt.todir:
+            fastcopycmd += f' /to={opt.todir}'
+        else:
+            fastcopycmd += f' /to={opt.dstdir}'
+        subprocess.call(fastcopycmd)
+
     def on_ui_tree_copy_to(self, a_iid):
         print("on_ui_tree_copy_to", a_iid)
+        self.do_fastcopy("diff", a_iid)
+
+    def on_ui_tree_move_to(self, a_iid):
+        print("on_ui_tree_move_to", a_iid)
+        self.do_fastcopy("move", a_iid)
 
     def on_ui_tree_delete(self, a_iid):
         print("on_ui_tree_delete", a_iid)
+        self.do_fastcopy("delete", a_iid)
 
     def on_ui_tree_explorer(self, iid):
         print("on_ui_tree_explorer", iid)
@@ -249,6 +282,7 @@ if __name__=="__main__":
     sta = CSTA()
     opt = opt_parse(sys.argv[1:])
     opt.dryrun = 1
+
     # main_newpp(opt.srcdir, opt.dstdir)
 
     mainui = MainUi()
