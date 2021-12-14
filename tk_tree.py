@@ -424,11 +424,12 @@ class TkYzwFrameTree(tk.Frame):
             iid_text = list_get(a, 1, "").split(":")
             _iid = list_get(iid_text, 0, "")
             text = list_get(iid_text, 1, "")
+            sorted_key = list_get(iid_text, 2, None)
             if text == '<ts>': text = time.strftime("%H:%M:%S")
             if not text: text = _iid
             if not _iid: _iid = None
             values = (list_get(a, 2, ""),)
-            self.easy_insert(iid_parent, index="end", _iid=_iid, text=text, values=values)
+            self.easy_insert(iid_parent, index="end", _iid=_iid, text=text, values=values, sorted_key=sorted_key)
         elif action == 'X':
             self.do_clear()
         elif action == 'x':
