@@ -63,8 +63,8 @@ def opt_parse(argv):
     parser.add_argument('dstdir',                  type=str,                  help='compare dstdir')
     parser.add_argument('-t', "--todir",           type=str,                  help='copy/move to dir')
     parser.add_argument("-v", "--verbose",         action="count", default=0, help="increase output verbosity")
-    # parser.add_argument("-n", "--dryrun",          action="store_true",       help="dry run")
-    # parser.add_argument("-k", "--keepsame",        action="store_true",       help="keep source if dst exists")
+    parser.add_argument("-n", "--dryrun",          action="store_true",       help="dry run")
+    parser.add_argument("-k", "--keepsame",        action="store_true",       help="keep source if dst exists")
     parser.add_argument("-r", "--depth",           action="store_true",       help="no recursive")
     parser.add_argument("-c", "--content_compare", action="store_true",       help="compare whole content")
     return parser.parse_args(argv)
@@ -106,48 +106,73 @@ def move_photo_fd(srcdir, filename, dstpdir, t, tn):
         if not opt.keepsame: sta.removed += 1
         return
 
-    # if not opt.dryrun:
-    #     if not os.path.exists(dstdir): os.mkdir(dstdir)
-    #     try:
-    #         shutil.move(filename, dstdir)
-    #         sta.moved += 1
-    #         # shutil.copy2(filename, dstdir)  # 用copy2会保留图片的原始属性
-    #         # os.remove(filename)
-    #         print("")
-    #     except:
-    #         sta.failed += 1
-    #         print("failed")
-    # else:
-    #     sta.moved += 1
-    #     print("")
+    if not opt.dryrun:
+        if not os.path.exists(dstdir): os.mkdir(dstdir)
+        try:
+            shutil.move(filename, dstdir)
+            sta.moved += 1
+            # shutil.copy2(filename, dstdir)  # 用copy2会保留图片的原始属性
+            # os.remove(filename)
+            print("")
+        except:
+            sta.failed += 1
+            print("failed")
+    else:
+        sta.moved += 1
+        print("")
+
+
+class PhotoItem:
+    def __init__(self, root:str, filename:str):
+        filepath = os.path.join(root, filename)
+        exif = get_exif(filepath)
+        tn = '原始时间'
+        t = t_exif(exif, 'EXIF DateTimeOriginal')
+        if not t:
+            tn = '图片时间'
+            t = t_exif(exif, 'Image DateTime')
+        if not t:
+            tn = '文件名时间'
+            t = t_filename(filename)
+        if not t:
+            tn = '文件时间戳'
+            t = t_filetime(filepath)
+
+        self.srcdir = root            # 源目录
+        self.filename = filename      # 文件名，不带目录
+        self.filepath_src = filepath  # 源文件名，全路径
+        self.tn = tn                  # 图片按时间的分类
+        self.t = t                    # 图片的日期，用于新建子目录
+        self.dstdir = opt.dstdir + "\\" + t
+        self.filepath_dst = os.path.join(self.dstdir, filename)
 
 
 def iter_srcdir(srcdir):
+    """generator, 遍历源图片"""
     for root, dirs, files in os.walk(srcdir, True):
         print ("目录" + root)
         for filename in files:
             sta.total += 1
-            filepath = os.path.join(root, filename)
             e = filename[-4:].lower() # _, e = os.path.splitext(filename)
             if e.lower() not in ('.jpg','.png', '.3gp', '.mp4'):
                 print("\t%s ignored" % filepath)
                 sta.ignored += 1
                 continue
-            filepath = os.path.join(root, filename)
-            exif = get_exif(filepath)
-            tn = '原始时间'
-            t = t_exif(exif, 'EXIF DateTimeOriginal')
-            if not t:
-                tn = '图片时间'
-                t = t_exif(exif, 'Image DateTime')
-            if not t:
-                tn = '文件名时间'
-                t = t_filename(filename)
-            if not t:
-                tn = '文件时间戳'
-                t = t_filetime(filepath)
-            #move_photo_fd(filepath, filename, t, tn)
-            yield (filepath, filename, t, tn)
+            # filepath = os.path.join(root, filename)
+            # exif = get_exif(filepath)
+            # tn = '原始时间'
+            # t = t_exif(exif, 'EXIF DateTimeOriginal')
+            # if not t:
+            #     tn = '图片时间'
+            #     t = t_exif(exif, 'Image DateTime')
+            # if not t:
+            #     tn = '文件名时间'
+            #     t = t_filename(filename)
+            # if not t:
+            #     tn = '文件时间戳'
+            #     t = t_filetime(filepath)
+            # #move_photo_fd(filepath, filename, t, tn)
+            yield PhotoItem(root, filename)
         if not opt.depth: break # 不遍历子目录
 
 
@@ -204,14 +229,14 @@ class MainApp(TkYzwMainUiApp):
         threading.Thread(target=self.main_newpp, args=(), daemon=True).start()
 
     def main_newpp(self):
-        for filepath_src, filename, t, tn in iter_srcdir(opt.srcdir):
-            dstdir = opt.dstdir + "\\" + t
-            filepath_dst = os.path.join(dstdir, filename)
-            if is_same(filepath_src, filepath_dst):
-                tn = "same"
-            self.d_tn_cnt[tn] += 1
-            mainui.ui_tree.easy_item(tn, text=f"{tn}({self.d_tn_cnt[tn]})")
-            mainui.ui_tree.easy_insert(tn, filepath_src, value=(filepath_dst,))
+        for pi in iter_srcdir(opt.srcdir):
+            # dstdir = opt.dstdir + "\\" + pi.t
+            # filepath_dst = os.path.join(dstdir, pi.filename)
+            if is_same(pi.filepath_src, pi.filepath_dst):
+                pi.tn = "same"
+            self.d_tn_cnt[pi.tn] += 1
+            mainui.ui_tree.easy_item(pi.tn, text=f"{pi.tn}({self.d_tn_cnt[pi.tn]})")
+            mainui.ui_tree.easy_insert(pi.tn, pi.filepath_src, value=(pi.filepath_dst,))
 
     def on_ui_tree_command(self, iid, event):
         print(f"on_ui_tree_command: iid={iid}, event={event}")
@@ -256,9 +281,9 @@ class MainApp(TkYzwMainUiApp):
         self._gen_fastcopy_srcfile(a_iid)
         fastcopycmd = fr'C:\Users\yzw\FastCopy\FastCopy.exe /cmd={cmd} /estimate /no_exec /srcfile=newpp_fastcopy.txt'
         if opt.todir:
-            fastcopycmd += f' /to={opt.todir}'
+            fastcopycmd += f' /to={opt.todir}\\'
         else:
-            fastcopycmd += f' /to={opt.dstdir}'
+            fastcopycmd += f' /to={opt.dstdir}\\'
         subprocess.call(fastcopycmd)
 
     def on_ui_tree_copy_to(self, a_iid):
