@@ -65,7 +65,7 @@ def opt_parse(argv):
     parser.add_argument("-v", "--verbose",         action="count", default=0, help="increase output verbosity")
     parser.add_argument("-n", "--dryrun",          action="store_true",       help="dry run")
     parser.add_argument("-k", "--keepsame",        action="store_true",       help="keep source if dst exists")
-    parser.add_argument("-r", "--depth",           action="store_true",       help="no recursive")
+    parser.add_argument("-r", "--depth",           action="store_true",       help="recursive")
     parser.add_argument("-c", "--content_compare", action="store_true",       help="compare whole content")
     return parser.parse_args(argv)
 
@@ -157,7 +157,7 @@ def iter_srcdir(srcdir):
             sta.total += 1
             e = filename[-4:].lower() # _, e = os.path.splitext(filename)
             if e.lower() not in ('.jpg','.png', '.3gp', '.mp4'):
-                print("\t%s ignored" % filepath)
+                # print(f"\t{root} {filename} ignored")
                 sta.ignored += 1
                 continue
             #move_photo_fd(filepath, filename, t, tn)
@@ -230,6 +230,7 @@ class MainApp(TkYzwMainUiApp):
             mainui.ui_tree.easy_item(pi.tn, text=f"{pi.tn}({self.d_tn_cnt[pi.tn]})")
             # mainui.ui_tree.easy_insert(pi.tn, pi.filepath_src, value=(pi.dstdir,))
             mainui.ui_tree.easy_item(iid, value=(pi.dstdir,))
+        print("done")
 
     def on_ui_tree_command(self, iid, event):
         print(f"on_ui_tree_command: iid={iid}, event={event}")
@@ -286,7 +287,10 @@ class MainApp(TkYzwMainUiApp):
             pi = self.d_iid_pi[iid]
             print(f"copy {pi.filepath_src} {pi.todir}")
             if not os.path.exists(pi.todir): os.mkdir(pi.todir)
-            shutil.copy2(pi.filepath_src, pi.todir)  # 用copy2会保留图片的原始属性
+            try:
+                shutil.copy2(pi.filepath_src, pi.todir)  # 用copy2会保留图片的原始属性
+            except:
+                traceback.print_exc()
 
     def on_ui_tree_move_to(self, a_iid):
         print("on_ui_tree_move_to", a_iid)
