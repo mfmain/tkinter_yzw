@@ -49,6 +49,7 @@ class TkYzwFrameTree(tk.Frame):
 
         self.all_user_defined_iids = set()
         self.d_piid_a_sortkey = defaultdict(SortedList)  # 父节点iid -> 子节点的sorted_key列表
+        self.d_iid_seq = defaultdict(int)
 
         if isinstance(column_list[0], tuple):
             a = [x[0] for x in column_list]
@@ -380,6 +381,15 @@ class TkYzwFrameTree(tk.Frame):
                 kw['text'] = _iid
         return self.insert(path, index, sorted_key=sorted_key, reversed=reversed, **kw)
 
+    def process_special_text(self, iid_parent, text):
+        """节点上显示的文本"""
+        if text == '<ts>':
+            text = time.strftime("%H:%M:%S")
+        elif text == '<seq>':
+            self.d_iid_seq[iid_parent] += 1
+            text = str(self.d_iid_seq[iid_parent])
+        return  text
+
     def treecmd(self, cmd:str, rootpath="", rootpath_=""):
         """ 允许指定一个顶级rootpath
             rootpath_是rootpath加上目录分隔符/, 这个冗余仅仅是为了性能优化 """
@@ -422,7 +432,7 @@ class TkYzwFrameTree(tk.Frame):
             iid_text = list_get(a, 1, "").split(":")
             _iid = list_get(iid_text, 0, "")
             text = list_get(iid_text, 1, "")
-            if text == '<ts>': text = time.strftime("%H:%M:%S")
+            text = self.process_special_text(iid_parent, text)
             if not text: text = _iid
             if not _iid: _iid = None
             values = (list_get(a, 2, ""),)
@@ -434,7 +444,7 @@ class TkYzwFrameTree(tk.Frame):
             _iid = list_get(iid_text, 0, "")
             text = list_get(iid_text, 1, "")
             sorted_key = list_get(iid_text, 2, None)
-            if text == '<ts>': text = time.strftime("%H:%M:%S")
+            text = self.process_special_text(iid_parent, text)
             if not text: text = _iid
             if not _iid: _iid = None
             values = (list_get(a, 2, ""),)
