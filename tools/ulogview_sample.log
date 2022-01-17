@@ -41,9 +41,9 @@ Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the nod
 Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
 Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
 Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
-Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
-Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
-Idemo_log/Anonymous :<ts> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<seq> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<seq> Anonymous timestamp node displays timestamp as the node text
+Idemo_log/Anonymous :<seq> Anonymous timestamp node displays timestamp as the node text
 
 `easy_item(rootpath_+"Usage", tags=["h1", "blue"])
 `easy_item(rootpath_+"demo_log", tags=["h1", "blue"])

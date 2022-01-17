@@ -17,6 +17,14 @@ import tkinter as tk
 from tkinter_yzw.tk_tree import TkYzwFrameTree
 
 
+if sys.platform == 'win32':
+    CRLF = b'\r\n'
+    CRLFLEN = 2
+else:
+    CRLF = b'\n'
+    CRLFLEN = 1
+
+
 class MyGlobals():
     def __init__(self):
         self.q = queue.Queue()
@@ -53,6 +61,25 @@ class ThreadInputFile(threading.Thread):
         self.fn = fn
         self.encoding = encoding
         self.polltv = polltv
+        self.gen_line_buf = b""
+
+    def on_full_line(self, line:str):
+        msg = line.decode(encoding).rstrip()  # strip tailing \r\n
+        if log: print(msg, file=log, flush=True)
+        self.q.put((fn, msg))
+
+    def split_lines(self, bufnew:bytes):
+        self.gen_line_buf += bufnew
+        rra = []
+        pstart = 0
+        while 1:
+            npos = self.gen_line_buf.find(CRLF, pstart)  # index?
+            if npos < 0:
+                self.gen_line_buf = self.gen_line_buf[pstart:]
+                return rra
+            else:
+                rra.append(self.gen_line_buf[pstart:npos])
+                pstart = npos + CRLFLEN
 
     def run(self):
         fn = self.fn
@@ -64,16 +91,14 @@ class ThreadInputFile(threading.Thread):
         # st_ino = st.st_ino
         st_size = 0
         while True:
-            line_ = file.readline()
-            print("readline %r" % line_)
-            if line_:
-                line += line_
-                if line[-1] == 10:  # b"\n"
-                    msg = line.decode(encoding).rstrip()  # strip tailing \r\n
-                    if log: print(msg, file=log, flush=True)
-                    self.q.put((fn, msg))
-                    line = b""
-                    continue
+            buf = file.read()
+            print(f"read {len(buf)}")
+            a_line = self.split_lines(buf)
+            for line in a_line:
+                # print(line)
+                msg = line.decode(encoding)
+                if log: print(msg, file=log, flush=True)
+                self.q.put((fn, msg))
 
             # read nothing
             st = os.stat(self.fn)
