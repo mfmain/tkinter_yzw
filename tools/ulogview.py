@@ -61,24 +61,19 @@ class ThreadInputFile(threading.Thread):
         self.fn = fn
         self.encoding = encoding
         self.polltv = polltv
-        self.gen_line_buf = b""
-
-    def on_full_line(self, line:str):
-        msg = line.decode(encoding).rstrip()  # strip tailing \r\n
-        if log: print(msg, file=log, flush=True)
-        self.q.put((fn, msg))
+        self.split_lines_buf = b""
 
     def split_lines(self, bufnew:bytes):
-        self.gen_line_buf += bufnew
+        self.split_lines_buf += bufnew
         rra = []
         pstart = 0
         while 1:
-            npos = self.gen_line_buf.find(CRLF, pstart)  # index?
+            npos = self.split_lines_buf.find(CRLF, pstart)  # index?
             if npos < 0:
-                self.gen_line_buf = self.gen_line_buf[pstart:]
+                self.split_lines_buf = self.split_lines_buf[pstart:]
                 return rra
             else:
-                rra.append(self.gen_line_buf[pstart:npos])
+                rra.append(self.split_lines_buf[pstart:npos])
                 pstart = npos + CRLFLEN
 
     def run(self):
@@ -92,20 +87,21 @@ class ThreadInputFile(threading.Thread):
         st_size = 0
         while True:
             buf = file.read()
-            print(f"read {len(buf)}")
-            a_line = self.split_lines(buf)
-            for line in a_line:
-                # print(line)
-                msg = line.decode(encoding)
-                if log: print(msg, file=log, flush=True)
-                self.q.put((fn, msg))
+            if buf:
+                print(f"read {len(buf)}")
+                a_line = self.split_lines(buf)
+                for line in a_line:
+                    # print(line)
+                    msg = line.decode(encoding)
+                    if log: print(msg, file=log, flush=True)
+                    self.q.put((fn, msg))
 
             # read nothing
             st = os.stat(self.fn)
             if st.st_size < st_size or st.st_nlink < 1:
                 print("file rewinded, reopen it")
                 file = open(fn, "rb")
-                line = b""
+                self.split_lines_buf = b""
             st_size = st.st_size
             time.sleep(args.polltv)
 
@@ -163,6 +159,50 @@ class Ui:
                 pass
 
         self.root.after(100, self.on_timer)
+
+
+class _DebugmeSplitLines:
+    def __init__(self):
+        self.gen_line_buf = b""
+
+    def split_lines(self, bufnew:bytes):
+        self.gen_line_buf += bufnew
+        rra = []
+        pstart = 0
+        while 1:
+            npos = self.gen_line_buf.find(b'\n', pstart)  # index?
+            if npos < 0:
+                self.gen_line_buf = self.gen_line_buf[pstart:]
+                return rra
+            else:
+                rra.append(self.gen_line_buf[pstart:npos])
+                pstart = npos + 1
+
+    def test1(self):
+        a = self.split_lines(b"111\n222\n333\n444")
+        print(a)
+        a = self.split_lines(b"aaa\nbbb\nccc\nddd")
+        print(a)
+        a = self.split_lines(b"AAA")
+        print(a)
+        a = self.split_lines(b"111\n222")
+        print(a)
+        a = self.split_lines(b"aaa\nbbb\n")
+        print(a)
+        a = self.split_lines(b"ccc\n")
+        print(a)
+
+    def test2(self):
+        f = open(r"c:\s\log\xxx.log", "rb")
+        t1 = time.perf_counter()
+        while 1:
+            buf = f.read(10000)
+            if not buf: break
+            a = self.split_lines(buf)
+            print(len(a))
+
+        t2 = time.perf_counter()
+        print(t2 - t1)
 
 
 def _getopt():
