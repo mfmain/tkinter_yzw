@@ -132,10 +132,16 @@ class TkYzwMainUi:
 
 
 class TkYzwMainUiApp:
+    """
+    通过mainq串行化事件（包括定时器），回调函数中无须加锁
+    idle_timers 是在mainq空闲时才会触发的定时事件
+    ui事件在on_ui_{callbackid}中触发
+    其他事件 on_mainq
+    """
     def __init__(self, mainui:TkYzwMainUi, enable_idle=None, idle_timers=None):
         """
         # param enable_idle：None or float
-        #     idle多长时间触发on_idle
+        #     mainq中idle多长时间触发on_idle
         #     缺省为None，即不启用idle机制，即便重载了self.on_idle，也不会被调用
         # param timers：None or list of float
         #     如果没有打开enable_idle，会自动打开enable_idle=0.01
@@ -167,28 +173,37 @@ class TkYzwMainUiApp:
             a_timercycle = []
 
         while 1:
+            btimeout = False
             try:
                 msgtype, *argv = mainq.get(block=True, timeout=enable_idle)
             except queue.Empty:
-                # timeout
-                self.on_idle()
-                t = time.time()
-                for i, cycle in enumerate(a_timercycle):
-                    if t - a_timerlast[i] > cycle:
-                        a_timerlast[i] = t
-                        self.on_idle_timer(cycle)
-                continue
+                btimeout = True
             except:
                 traceback.print_exc()
                 continue
 
-            if msgtype == 'ui':
-                callbackid, la, ka = argv
-                # mainui.mainui_dispatch(argv[0], self.ui_dispatcher)
-                func = getattr(self, f"on_ui_{callbackid}")
-                if func: func(*la, **ka)
-            else:
-                self.on_mainq(msgtype, *argv)
+            try:
+                if btimeout:
+                    self.on_idle()
+
+                    t = time.time()
+                    for i, cycle in enumerate(a_timercycle):
+                        if t - a_timerlast[i] > cycle:
+                            a_timerlast[i] = t
+                            self.on_idle_timer(cycle)
+                    continue
+
+                if msgtype == 'ui':
+                    callbackid, la, ka = argv
+                    # mainui.mainui_dispatch(argv[0], self.ui_dispatcher)
+                    func = getattr(self, f"on_ui_{callbackid}")
+                    if func:
+                        func(*la, **ka)
+                else:
+                    self.on_mainq(msgtype, *argv)
+            except:
+                traceback.print_exc()
+                continue
 
     def on_mainq(self, msgtype, *argv):
         print(f"{msgtype} {msga}")
