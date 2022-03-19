@@ -348,6 +348,17 @@ class TkYzwFrameTree(tk.Frame):
             self.easy_path(path, index, sorted_key=sorted_key, reversed=reversed)
         self.wx.item(path, **kw)
 
+    def easy_set(self, path:str, index="end", sorted_key=None, reversed=False, column=None, value=None, **kw):
+        """ 设置指定路径的节点
+
+        easy系列使用路径格式来规范节点的iid
+        与easy_insert相比,这个无法插入匿名节点
+        """
+        if not path: return
+        if path not in self.all_user_defined_iids:
+            self.easy_path(path, index, sorted_key=sorted_key, reversed=reversed)
+        self.wx.set(path, column=column, value=value)
+
     def easy_insert(self, path:str, _iid:str=None, index="end", sorted_key=None, reversed=False, **kw):
         """ 在指定父路径插入子节点, 允许使用sorted_key排序(此时忽略index)
                 匿名节点: _iid=None text=节点显示名
