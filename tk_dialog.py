@@ -3,8 +3,8 @@ import tkinter as tk
 
 
 class TkYzwDialog(tk.Toplevel):
-    def __init__(self, master, title=None, modal=True,  **ka):
-        super().__init__(master, **ka)
+    def __init__(self, master, title=None, modal=True, *la, **ka):
+        super().__init__(master, *la, **ka)
         if title is not None:
             self.title(title)
         self.transient(master)
