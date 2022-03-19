@@ -34,7 +34,7 @@ def _yaml_load(fn, encoding=None, default=None):
 class TkYzwMainUi:
     self = None  # ready mark
 
-    def __init__(self, title=None, font='微软雅黑 9', icon_fn="", bg=None, geometry=None, topmost=False, layout=None, mainq=None):
+    def __init__(self, title=None, font='微软雅黑 9', icon_fn="", bg=None, geometry=None, topmost=False, layout=None, layout_encoding=None, mainq=None):
         """
         param mainq:
             如果传入空，将生成一个self.mainq，供外部引用
@@ -56,11 +56,12 @@ class TkYzwMainUi:
         if icon_fn and os.path.exists(icon_fn): self.root.iconbitmap(icon_fn)
 
         self.layout_fn = ""
+        self.layout_encoding = layout_encoding
         if layout:
             self.root.protocol("WM_DELETE_WINDOW", self.do_exit)
             if isinstance(layout, str):
                 self.layout_fn = layout
-                self.layout = _yaml_load(open(self.layout_fn, "r", encoding="gbk"), {})
+                self.layout = _yaml_load(self.layout_fn, layout_encoding)
             elif isinstance(layout, dict):
                 self.layout = layout
 
@@ -78,6 +79,14 @@ class TkYzwMainUi:
         self.root_destroyed = False
         self.self = self  # ready
 
+    def getall_uiv(self):
+        d = dict()
+        for mname in self.__dict__:
+            if mname.startswith("uiv_"):
+                mvalue = getattr(self, mname)
+                d[mname[4:]] = mvalue.get()
+        return d
+
     def after(self, ms:int, func):
         self.after_id = self.root.after(ms, func)
 
@@ -94,7 +103,7 @@ class TkYzwMainUi:
             self.after_id = None
 
         if self.layout_fn:
-            with open(g_.fn_app_layout, "w") as f:
+            with open(self.layout_fn, "w", encoding=self.layout_encoding) as f:
                 print("geometry:", self.root.winfo_geometry(), file=f)
                 self.on_save_layout(f)
 
@@ -244,6 +253,9 @@ if __name__ == '__main__':
 
     class MainApp(TkYzwMainUiApp):
         def __init__(self, mainui:TkYzwMainUi, enable_idle=None, idle_timers=None):
+
+            # user init codes here
+
             super().__init__(mainui, enable_idle, idle_timers)
             threading.Thread(target=thproc_timer, args=(), daemon=True).start()
 
