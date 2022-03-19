@@ -6,8 +6,9 @@ import tkinter as tk
 
 
 class TkYzwTableCell(tk.Frame):
-    def __init__(self, ui:tk.Widget, uiv=None):
-        self.ui = ui
+    """ 单元格 """
+    def __init__(self, uix:tk.Widget, uiv=None):
+        self.uix = uix
         self.uiv = uiv  #type:  Union(tk.Variable, list[tk.Variable])
         self.rowi = -1
         self.coli = -1
@@ -15,6 +16,16 @@ class TkYzwTableCell(tk.Frame):
 
 
 class TkYzwTable(tk.Frame):
+    """ 表格
+        布局方式:
+            cell 单元格可以是任意tk控件
+            add_cell(cell)在当前行的最后一列添加一个单元格cell
+            add_row 开始新的一行
+        访问方式:
+            d_cellkey_cell[cellkey]  通过cellkey来访问命名单元格
+            d_rowi_a_cells[0] 返回第一行的单元格列表
+            d_coli_a_cells[0] 返回第一列的单元格列表
+    """
     def __init__(self, parent, bd=3, relief="groove", bg="#b0b0cc", **ak):
         super().__init__(parent, bd=bd, relief=relief, bg=bg, **ak)
         self.d_cellkey_cell = dict()           #type: dict[any, TkYzwTableCell]
@@ -36,8 +47,8 @@ class TkYzwTable(tk.Frame):
             self.d_cellkey_cell[cellkey] = cell
 
         rowi = self.loc_next_rowi
-        if cell.ui:
-            cell.ui.grid(row=rowi, column=coli, rowspan=rowspan, columnspan=columnspan, sticky=sticky, padx=padx, pady=pady, **gridopt)
+        if cell.uix:
+            cell.uix.grid(row=rowi, column=coli, rowspan=rowspan, columnspan=columnspan, sticky=sticky, padx=padx, pady=pady, **gridopt)
         if rowi not in self.d_rowi_a_cells:
             self.rowconfigure(rowi, weight=1)
             self.d_rowi_a_cells[rowi] = []
@@ -60,16 +71,16 @@ class TkYzwTable(tk.Frame):
     def cell_hide(self, cellkey):
         cell = self.d_cellkey_cell.get(cellkey, None)
         if cell is None: return
-        cell.ui.grid_forget()  # ['state'] = 'disabled'
-        cell.ui = tk.Label(self, text="")
-        cell.ui.grid(row=cell.rowi, column=cell.coli, **cell.gridopt)
+        cell.uix.grid_forget()  # ['state'] = 'disabled'
+        cell.uix = tk.Label(self, text="")
+        cell.uix.grid(row=cell.rowi, column=cell.coli, **cell.gridopt)
 
     def row_hide(self, rowi:int):
         a_cells = self.d_rowi_a_cells.get(rowi, [])
         if not a_cells: return
 
         for cell in a_cells:
-            cell.ui.grid_forget()  # ['state'] = 'disabled'
+            cell.uix.grid_forget()  # ['state'] = 'disabled'
         self.rowconfigure(rowi, weight=0)
 
     def row_show(self, rowi:int):
@@ -77,7 +88,7 @@ class TkYzwTable(tk.Frame):
         if not a_cells: return
 
         for cell in a_cells:
-            cell.ui.grid(row=cell.rowi, column=cell.coli, **cell.gridopt)
+            cell.uix.grid(row=cell.rowi, column=cell.coli, **cell.gridopt)
         self.rowconfigure(rowi, weight=1)
 
 
