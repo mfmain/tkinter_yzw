@@ -62,7 +62,7 @@ class TkYzwFrameTree(tk.Frame):
 
         # 配置抬头行 column_list
         style = ttk.Style()
-        style.configure("Treeview", foreground='black', font="微软雅黑 9")  #  highlightthickness=0, bd=0
+        style.configure("Treeview", foreground='black', font="微软雅黑 10")  #  highlightthickness=0, bd=0
         style.configure("Treeview.Heading", foreground='black', font="微软雅黑 11 bold")
 
         ANCHORS = ('n', 's', 'w', 'e', 'nw', 'sw', 'ne', 'se', 'ns', 'ew', 'nsew', 'center')

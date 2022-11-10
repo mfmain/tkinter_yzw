@@ -94,7 +94,11 @@ class TkYzwMainUi:
         pass
 
     def on_save_layout(self, f):
-        pass
+        # 程序退出时,自动调用
+        layout = self.layout.copy()
+        layout.pop('geometry', None)
+        for k,v in layout.items():
+            print(f"{k}: {repr(v)}", file=f)
 
     def do_exit(self, *la, **ka):
         # *la, **ka to accept mainui_dispatch's calling convention
@@ -115,6 +119,7 @@ class TkYzwMainUi:
             pass
         self.root.quit()  # quit mainloop even if destroy() failed
         self.root_destroyed = True
+        self.mainq.put(("exit", 0))
 
     def on_callback(self, callbackid, *la, **ka):
         self.mainq.put(("ui", callbackid, la, ka))
@@ -181,7 +186,7 @@ class TkYzwMainUiApp:
         else:
             a_timercycle = []
 
-        while 1:
+        while not self.mainui.root_destroyed:
             btimeout = False
             try:
                 msgtype, *argv = mainq.get(block=True, timeout=enable_idle)
@@ -202,20 +207,25 @@ class TkYzwMainUiApp:
                             self.on_idle_timer(cycle)
                     continue
 
-                if msgtype == 'ui':
+                if msgtype == 'exit':
+                    break
+                elif msgtype == 'ui':
                     callbackid, la, ka = argv
                     # mainui.mainui_dispatch(argv[0], self.ui_dispatcher)
                     func = getattr(self, f"on_ui_{callbackid}")
-                    if func:
-                        func(*la, **ka)
+                    if func: func(*la, **ka)  # self.on_ui_xxx
                 else:
                     self.on_mainq(msgtype, *argv)
             except:
                 traceback.print_exc()
                 continue
+        self.on_app_exit()
+
+    def on_app_exit(self):
+        pass
 
     def on_mainq(self, msgtype, *argv):
-        print(f"{msgtype} {msga}")
+        print(f"{msgtype} {argv}")
 
     def on_idle(self):
         # print("idle")

@@ -2,6 +2,7 @@ from .tk_mainui import *
 from .tk_autoscrollbar import *
 from .tk_autoscrollbar import *
 from .tk_dialog import *
+from .tk_listedit import *
 from .tk_index import *
 from .tk_pages import *
 from .tk_sheet import *
