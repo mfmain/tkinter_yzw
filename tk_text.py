@@ -1,6 +1,6 @@
 
 import tkinter as tk
-from yzwpy.ut.tk_autoscrollbar import at_enable_autoscroll
+from tkinter_yzw.tk_autoscrollbar import at_enable_autoscroll
 
 
 @at_enable_autoscroll()

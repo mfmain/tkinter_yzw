@@ -31,13 +31,15 @@ def list_get(a:list, i:int, default:any):
 
 
 class TkYzwFrameTree(tk.Frame):
-    def __init__(self, master, column_list, width_list:list=None, command=None, on_select=None, heading_command=None, scroll="", show=None, **kw):
+    def __init__(self, master, column_list, width_list:list=None, command=None, on_select=None, heading_command=None, scroll="", **kw):
         """
         column_list = [("tag", 120), ("desc,w", "100,w+"), ("列名,列名anchor", "列宽,内容行anchor")]
-        show="tree" 无抬头栏；  show="headings" 有抬头  # 无抬头无法拉伸单列的列宽
         command: 双击某个节点时调用，同时on_select也会被调用
         on_select: 单击某个节点时调用
         heading_command： 单击抬头时调用
+        kw:
+            show="tree" 无抬头栏；  show="headings" 有抬头  # 无抬头无法拉伸单列的列宽
+
         """
 
         self.cb_command = command
@@ -57,7 +59,7 @@ class TkYzwFrameTree(tk.Frame):
             column_list = a
 
         # column_list = [('tag', 'w'), ('desc', 'w')] # [#0,c1,c2,...]
-        tree = ttk.Treeview(fr, columns=["c%d" % (i + 1) for i in range(len(column_list)-1)], show=show, **kw)
+        tree = ttk.Treeview(fr, columns=["c%d" % (i + 1) for i in range(len(column_list)-1)], **kw)
         self.wx = tree  #type: ttk.Treeview
 
         # 配置抬头行 column_list

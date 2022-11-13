@@ -6,7 +6,7 @@
 
 
 import tkinter as tk
-from .tk_dialog import TkYzwDialog
+from tkinter_yzw.tk_dialog import TkYzwDialog
 
 
 class _DlgItemEditor(TkYzwDialog):
