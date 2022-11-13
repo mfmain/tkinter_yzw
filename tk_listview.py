@@ -6,20 +6,28 @@ from collections import OrderedDict
 
 
 class TkYzwFrameListview(tk.Frame):
-    def __init__(self, parent, column_list:tuple, width_list:tuple, maxrows:int = 0, move_on_update=False, yscroll=False, **ak):
+    def __init__(self, master, column_list, on_cell=None, on_select=None, on_heading=None, scroll="", maxrows:int=0, movetop_on_update=False, **ak):
         """
-        :param column_list: [heading,anchor] #> "<name>,<anchor>" # ["时间", "来源", "分类", "信息,w"]
-        :type column_list:  list[str]
-        :param width_list: #> "50:100,w+"  # "<minwidth>:<width>, <anchor><stretch>"
-        :type width_list:  list[int or str]
+        :param column_list: [("tag", 120), ("desc,w", "100,w+"), ...("列名,列名anchor", "列宽,内容行anchor")] 不包含树节点"#0"
+        :param on_cell: 双击某个单元格时调用，同时on_select也会被调用
+        :param on_select: 选择时调用(单击某行单选, 按shift片选, 按ctrl多选)
+        :param on_heading： 单击抬头时调用
         :param maxrows: 正数限制行数，满后删最旧补新; 负数限制行数,满后不操作; 0不限制行数
-        :param move_on_update: 当进行更新时，移动该行到首行
-        :param yscroll: 卷滚条
-        :param height: 初始的窗口行数
+        :param movetop_on_update: 当进行更新时，移动该行到首行
+        :param kw:
+            show="tree" 无抬头栏；  show="headings" 有抬头  # 无抬头无法拉伸单列的列宽
         """
 
-        super().__init__(parent)
-        self.move_on_update = move_on_update
+        self.cb_command = on_cell
+        self.cb_on_select = on_select
+        self.movetop_on_update = movetop_on_update
+
+        coltext_list = [x[0] for x in column_list]
+        width_list = [x[1] for x in column_list]
+        keyfunc_list = [x[2] if len(x) > 2 else None for x in column_list]
+
+        super().__init__(master, **ak)
+        self.master = master
 
         if maxrows > 0:
             self.maxrows = maxrows     #type: int
@@ -39,29 +47,24 @@ class TkYzwFrameListview(tk.Frame):
         else:
             self.iids = {}             #type: dict [str, int]
 
-        if column_list:
-            ak['show'] = 'headings'
-        else:
-            ak['show'] = 'tree'
-            column_list = ["c%d"%(i+1) for i in range(len(width_list))]
-
         fr = self
-        tree = ttk.Treeview(fr, columns=["c%d"%(i+1) for i in range(len(column_list))], **ak)
+        tree = ttk.Treeview(fr, columns=["c%d"%(i+1) for i in range(len(coltext_list))], **ak)
         self.wx = tree         #type: ttk.Treeview
 
-        # 配置抬头行 column_list
+        # 配置抬头行 coltext_list
         style = ttk.Style()
         style.configure("Treeview", foreground='black')
         style.configure("Treeview.Heading", foreground='black', font="微软雅黑 11 bold")
 
+        tree.column('#0', stretch="no", minwidth=0, width=0)  # 不显示树节点#0
         ANCHORS = ('n', 's', 'w', 'e', 'nw', 'sw', 'ne', 'se', 'ns', 'ew', 'nsew', 'center')
-
-        for i, c in enumerate(column_list):
-            a = c.rsplit(",", maxsplit=1)
-            if len(a) > 1 and a[1] in ANCHORS:
-                tree.heading('c%d'%(i+1), text=a[0], anchor=a[1])
-            else:
-                tree.heading('c%d'%(i+1), text=c, anchor='center')
+        for i, coltext in enumerate(coltext_list):
+            colname = 'c%d' % (i+1)
+            a = coltext.rsplit(",", maxsplit=1)  # a> [text, anchor]
+            text=a[0]
+            anchor = a[1] if len(a) > 1 and a[1] in ANCHORS else "center"
+            keyfunc = keyfunc_list[i]
+            tree.heading(colname, text=text, anchor=anchor, command=lambda i=i, keyfunc=keyfunc: self._sort_column(i, False, keyfunc))
 
         # 配置内容行width_list
         for i, width in enumerate(width_list):  # tk.W
@@ -94,13 +97,98 @@ class TkYzwFrameListview(tk.Frame):
         tree.tag_configure('red', foreground='red')
         tree.tag_configure('grey', foreground='grey')
 
-        # 卷滚条
-        if yscroll:
-            vbar = ttk.Scrollbar(tree, orient="vertical", command=tree.yview)
-            tree.configure(yscrollcommand=vbar.set)
-            vbar.pack(side="right", fill="y")
+        tree.bind("<Double-1>", self._on_tree_double1)      # double click
+        # tree.bind("<ButtonRelease-1>", self.on_tree_release1)  # single click, 不能使用<Button-1>,会取到鼠标点击前的状态
+        # tree.bind("<<TreeviewSelect>>", self.on_tree_select)  # 一定能取到selection, 不会"index out of range"
+        tree.bind("<<TreeviewSelect>>", self.__on_tree_select)
 
-        tree.pack(fill="both", expand=1)
+        # 卷滚条
+        fr.columnconfigure(0, weight=1)
+        fr.rowconfigure(0, weight=1)
+        tree.grid(row=0, column=0, sticky="nsew")
+
+        if 'y' in scroll:
+            ysb = ttk.Scrollbar(fr, orient='vertical', command=tree.yview)
+            tree.configure(yscroll=ysb.set)
+            ysb.grid(row=0, column=1, sticky='ns')
+
+        if 'x' in scroll:
+            xsb = ttk.Scrollbar(fr, orient='horizontal', command=tree.xview)
+            tree.configure(xscroll=xsb.set)
+            xsb.grid(row=1, column=0, sticky='ew')
+
+        self.bind("x", self.on_key_x)
+        self.bind("X", self.on_key_X)
+        self.bind("<Control-c>", self.on_key_ctrl_c)
+        self.bind("<Control-a>", self.on_key_ctrl_a)
+
+    def _sort_column(self, coli, reverse, keyfunc):
+        # keyfunc 返回一个用于排序的key
+        cn = "c%d" % (coli + 1)
+        tv = self.wx
+        if keyfunc:
+            l = [(keyfunc(tv.set(iid, cn)), iid) for iid in tv.get_children('')]  # 这里的.set()没有提供value参数,实际效果是get
+        else:
+            l = [(tv.set(iid, cn), iid) for iid in tv.get_children('')]  # 这里的.set()没有提供value参数,实际效果是get
+        l.sort(reverse=reverse)
+
+        # rearrange items in sorted positions
+        for index, (val, iid) in enumerate(l):
+            tv.move(iid, '', index)
+
+        # reverse sort next time
+        tv.heading(cn, command=lambda: self._sort_column(coli, not reverse, keyfunc))
+
+    # def _sort_column_with_type(self, col, reverse, type_=str):
+    #     tv = self.wx
+    #     l = [(type_(tv.set(k, col)), k) for k in tv.get_children('')]  # 这里的.set()没有提供value参数,实际效果是get
+    #     print("_sort_column", l)
+    #     l.sort(reverse=reverse)
+    #
+    #     # rearrange items in sorted positions
+    #     for index, (val, k) in enumerate(l):
+    #         tv.move(k, '', index)
+    #
+    #     # reverse sort next time
+    #     tv.heading(col, command=lambda: self._sort_column_with(col, not reverse, type_))
+
+    def bind(self, sequence, func):
+        self.wx.bind(sequence, func)
+
+    def on_key_X(self, _):
+        self.do_clear()
+
+    def on_key_x(self, _):
+        self.do_deltree_selected()
+
+    def on_key_ctrl_c(self, _):
+        a = self.wx.selection()
+        a_msg = []
+        for iid in a:
+            text = self.wx.item(iid, 'text')
+            values = self.wx.item(iid, 'values')
+            a_msg.append("%s: %s" % (text, ','.join(values)))
+        clip_copy('\n'.join(a_msg))
+
+    def on_key_ctrl_a(self, _):
+        a_iid = self.iter_children("")
+        self.wx.selection_set(a_iid)
+
+    def __on_tree_select(self, event):
+        if self.cb_on_select:
+            iids = self.wx.selection()  # type: tuple
+            if iids: self.cb_on_select(iids[0], event)
+
+    def _on_tree_double1(self, event):
+        if self.cb_command:
+            iids = self.wx.selection()  # type: tuple
+            if iids: self.cb_command(iids[0], event)
+
+    def dump_selection(self):
+        print("dump_selection:")
+        iids = self.wx.selection()  # type: tuple  # 刚启动时,未选择任何东西,返回空tuple
+        for i, iid in enumerate(iids):
+            print('  [%d] iid=%s text=%s' % (i, iid, self.wx.item(iid, 'text')))
 
     def insert(self, v, index=0, iid=None, move=False, **ka):
         """
@@ -118,7 +206,7 @@ class TkYzwFrameListview(tk.Frame):
             except:
                 try:
                     self.wx.item(iid, values=v, **ka)
-                    if self.move_on_update: self.wx.move(iid, "", index)  # parent=""
+                    if self.movetop_on_update: self.wx.move(iid, "", index)  # parent=""
                 except:
                     pass
             return iid
@@ -127,7 +215,7 @@ class TkYzwFrameListview(tk.Frame):
         if iid in self.iids:
             # iid已经存在，则更新
             self.wx.item(iid, values=v, **ka)
-            if self.move_on_update: self.wx.move(iid, "", index) # parent=""
+            if self.movetop_on_update: self.wx.move(iid, "", index) # parent=""
             return iid
 
         # iid不存在，需要插入
@@ -178,15 +266,14 @@ if __name__ == '__main__':
             tk.Button(fr, text="退出", command=self.root.destroy, bg="#d0e0d0").pack(side="left")
             fr.pack(side="top")
 
-            column_list = ("时间", "来源", "分类", "信息,w")
-            width_list = (100, 100, "50:100,w", "100,w+")
+            column_list = [("时间", 100), ("来源", 100, int), ("分类","50:100,w", lambda x: int(x[1:])), ("信息,w", "100,w+")]
 
-            # 测试方案： 改变maxrows, move_on_update
-            #               (0, True), (0, False), (5, True), (5, False), (-5, True), (-5, False)
-            ui_listview = TkYzwFrameListview(self.root, column_list, width_list, maxrows=0, move_on_update=False, yscroll=True, height=10)
+            # 测试方案： 改变maxrows, movetop_on_update
+            #           (0, True), (0, False), (5, True), (5, False), (-5, True), (-5, False)
+            ui_listview = TkYzwFrameListview(self.root, column_list, maxrows=0, movetop_on_update=False, scroll="y")
             self.ui_listview = ui_listview
 
-            ui_listview.wx.column('#0', stretch="no", minwidth=0, width=0)
+            ui_listview.wx.column('#0', stretch="no", minwidth=0, width=0)  # 不显示树节点#0
 
             # ui_listview.wx.heading('c4', text='信息', anchor='w')   使用,w后缀实现
             # ui_listview.wx.column('c4', width=100, stretch=1, anchor='w')  使用,w+后缀实现
@@ -202,7 +289,7 @@ if __name__ == '__main__':
                 index = self.ui_listview.wx.index(sel[0])
             iid = self.uiv_iid.get()
             t = time.strftime("%H%M%S")
-            v = (t, iid, "x%d"%iid, "this is a very simple demo row %d"%iid )
+            v = (t, int(iid), "x%d"%iid, "this is a very simple demo row %d"%iid )
             self.ui_listview.insert(v, index=index, iid="myiid%d"%iid)
             self.uiv_iid.set(iid+1)
 
