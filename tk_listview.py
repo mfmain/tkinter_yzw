@@ -22,9 +22,9 @@ class TkYzwFrameListview(tk.Frame):
         self.cb_on_select = on_select
         self.movetop_on_update = movetop_on_update
 
-        coltext_list = [x[0] for x in column_list]
-        width_list = [x[1] for x in column_list]
-        keyfunc_list = [x[2] if len(x) > 2 else None for x in column_list]
+        a_coltext = [x[0] for x in column_list]
+        a_width = [x[1] for x in column_list]
+        a_keyfunc = [x[2] if len(x) > 2 else None for x in column_list]
 
         super().__init__(master, **ak)
         self.master = master
@@ -48,26 +48,26 @@ class TkYzwFrameListview(tk.Frame):
             self.iids = {}             #type: dict [str, int]
 
         fr = self
-        tree = ttk.Treeview(fr, columns=["c%d"%(i+1) for i in range(len(coltext_list))], **ak)
+        tree = ttk.Treeview(fr, columns=["c%d"%(i+1) for i in range(len(a_coltext))], **ak)
         self.wx = tree         #type: ttk.Treeview
 
-        # 配置抬头行 coltext_list
+        # 配置抬头行 a_coltext
         style = ttk.Style()
         style.configure("Treeview", foreground='black')
         style.configure("Treeview.Heading", foreground='black', font="微软雅黑 11 bold")
 
         tree.column('#0', stretch="no", minwidth=0, width=0)  # 不显示树节点#0
         ANCHORS = ('n', 's', 'w', 'e', 'nw', 'sw', 'ne', 'se', 'ns', 'ew', 'nsew', 'center')
-        for i, coltext in enumerate(coltext_list):
+        for i, coltext in enumerate(a_coltext):
             colname = 'c%d' % (i+1)
             a = coltext.rsplit(",", maxsplit=1)  # a> [text, anchor]
             text=a[0]
             anchor = a[1] if len(a) > 1 and a[1] in ANCHORS else "center"
-            keyfunc = keyfunc_list[i]
-            tree.heading(colname, text=text, anchor=anchor, command=lambda i=i, keyfunc=keyfunc: self._sort_column(i, False, keyfunc))
+            keyfunc = a_keyfunc[i]
+            tree.heading(colname, text=text, anchor=anchor, command=lambda i=i, kf=keyfunc: self._sort_column(i, False, kf))
 
         # 配置内容行width_list
-        for i, width in enumerate(width_list):  # tk.W
+        for i, width in enumerate(a_width):  # tk.W
             #> "50:100,w+"  # "<minwidth>:<width>, <anchor><stretch>"
             minwidth = 1
             stretch = 0
@@ -126,31 +126,14 @@ class TkYzwFrameListview(tk.Frame):
         # keyfunc 返回一个用于排序的key
         cn = "c%d" % (coli + 1)
         tv = self.wx
+        a_chiid = tv.get_children('')  # 第一级子节点
         if keyfunc:
-            l = [(keyfunc(tv.set(iid, cn)), iid) for iid in tv.get_children('')]  # 这里的.set()没有提供value参数,实际效果是get
+            a = [(keyfunc(tv.set(iid, cn)), iid) for iid in a_chiid]  # 这里的.set()没有提供value参数,实际效果是get
         else:
-            l = [(tv.set(iid, cn), iid) for iid in tv.get_children('')]  # 这里的.set()没有提供value参数,实际效果是get
-        l.sort(reverse=reverse)
-
-        # rearrange items in sorted positions
-        for index, (val, iid) in enumerate(l):
-            tv.move(iid, '', index)
-
-        # reverse sort next time
+            a = [(tv.set(iid, cn), iid) for iid in a_chiid]  # 这里的.set()没有提供value参数,实际效果是get
+        a.sort(reverse=reverse)
+        for index, (val, iid) in enumerate(a): tv.move(iid, '', index)
         tv.heading(cn, command=lambda: self._sort_column(coli, not reverse, keyfunc))
-
-    # def _sort_column_with_type(self, col, reverse, type_=str):
-    #     tv = self.wx
-    #     l = [(type_(tv.set(k, col)), k) for k in tv.get_children('')]  # 这里的.set()没有提供value参数,实际效果是get
-    #     print("_sort_column", l)
-    #     l.sort(reverse=reverse)
-    #
-    #     # rearrange items in sorted positions
-    #     for index, (val, k) in enumerate(l):
-    #         tv.move(k, '', index)
-    #
-    #     # reverse sort next time
-    #     tv.heading(col, command=lambda: self._sort_column_with(col, not reverse, type_))
 
     def bind(self, sequence, func):
         self.wx.bind(sequence, func)
@@ -290,7 +273,7 @@ if __name__ == '__main__':
             iid = self.uiv_iid.get()
             t = time.strftime("%H%M%S")
             v = (t, int(iid), "x%d"%iid, "this is a very simple demo row %d"%iid )
-            self.ui_listview.insert(v, index=index, iid="myiid%d"%iid)
+            self.ui_listview.insert(v, index=index, iid="ylv%d"%iid)
             self.uiv_iid.set(iid+1)
 
         def on_go(self):
