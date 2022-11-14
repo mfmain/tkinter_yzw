@@ -101,6 +101,7 @@ class TkYzwFrameListview(tk.Frame):
         # tree.bind("<ButtonRelease-1>", self.on_tree_release1)  # single click, 不能使用<Button-1>,会取到鼠标点击前的状态
         # tree.bind("<<TreeviewSelect>>", self.on_tree_select)  # 一定能取到selection, 不会"index out of range"
         tree.bind("<<TreeviewSelect>>", self.__on_tree_select)
+        tree.bind("<B1-Motion>", self._on_tree_b1_motion, add='+')
 
         # 卷滚条
         fr.columnconfigure(0, weight=1)
@@ -166,6 +167,14 @@ class TkYzwFrameListview(tk.Frame):
         if self.cb_command:
             iids = self.wx.selection()  # type: tuple
             if iids: self.cb_command(iids[0], event)
+
+    def _on_tree_b1_motion(self, event):
+        tv = event.widget
+        newindex = tv.index(tv.identify_row(event.y))
+
+        a_iid = tv.selection()
+        print("_on_tree_b1_motion selection: ", a_iid)
+        for iid in a_iid: tv.move(iid, '', newindex)
 
     def dump_selection(self):
         print("dump_selection:")
