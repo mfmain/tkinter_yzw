@@ -33,8 +33,8 @@ def list_get(a:list, i:int, default:any):
 class TkYzwFrameTree(tk.Frame):
     def __init__(self, master, column_list, width_list:list=None, command=None, on_select=None, heading_command=None, scroll="", **kw):
         """
-        column_list = [("tag", 120), ("desc,w", "100,w+"), ...("列名,列名anchor", "列宽,内容行anchor")] 分别对应column=['#0', 'c1', 'c2', ...]  #0是树节点
-        或: column_list = ["tag", "desc,w", ..."列名,列名anchor"] width_list=[120, "100,w+", ..."列宽,内容行anchor"]
+        推荐格式: column_list = [("tag", 120), ("desc,w", "100,w+"), ...("列名,列名anchor", "列宽,内容行anchor")] 分别对应column=['#0', 'c1', 'c2', ...]  #0是树节点
+        或早期格式: column_list = ["tag", "desc,w", ..."列名,列名anchor"] width_list=[120, "100,w+", ..."列宽,内容行anchor"]
         command: 双击某个单元格时调用，同时on_select也会被调用
         on_select: 选择时调用(单击某行单选, 按shift片选, 按ctrl多选)
         heading_command： 单击抬头时调用
@@ -547,7 +547,9 @@ if __name__ == '__main__':
 
             # column_list = ["tag", "时间", "来源", "分类", "信息,w"]
             # width_list = [120, 100, 100, "50:100,w", "100,w+"]
-            column_list = [("tag", 120), ("时间", 100), ("来源", 100), ("分类","50:100,w"), ("信息,w", "100,w+")]
+            # 建议使用column_list的新格式, 每一项为(column, width), 其中column/width都可以有anchor,前者表示各title的anchor, 后者表示row中各列的anchor
+            column_list = [("tag,w", "120,w"), ("时间", 100), ("来源", 100), ("分类","50:100,w"), ("信息,w", "100,w+")]
+
             ui_tree = TkYzwFrameTree(self.root, column_list, scroll="xy", height=10, on_select=self.on_select, command=self.on_command, heading_command=self.on_heading)
             # show="tree" 无抬头栏(无法拖拽列宽)；  show="headings" 有抬头
             self.ui_tree = ui_tree

@@ -17,12 +17,16 @@ import tkinter as tk
 from tkinter_yzw.tk_tree import TkYzwFrameTree
 
 
-if sys.platform == 'win32':
-    CRLF = b'\r\n'
-    CRLFLEN = 2
-else:
-    CRLF = b'\n'
-    CRLFLEN = 1
+# if sys.platform == 'win32':
+#     CRLF = b'\r\n'
+#     CRLFLEN = 2
+# else:
+#     CRLF = b'\n'
+#     CRLFLEN = 1
+
+# windows下也可能通过sshfs读取linux文件, 我糊涂了, 所以不要区分CRLF为妙
+CRLF = b'\n'
+CRLFLEN = 1
 
 
 class MyGlobals():
@@ -92,7 +96,8 @@ class ThreadInputFile(threading.Thread):
                 a_line = self.split_lines(buf)
                 for line in a_line:
                     # print(line)
-                    msg = line.decode(encoding)
+                    # msg = line.rstrip().decode(encoding)
+                    msg = line.decode(encoding)  # 没有strip掉\r也行, 提高点性能
                     if log: print(msg, file=log, flush=True)
                     self.q.put((fn, msg))
 
@@ -103,7 +108,7 @@ class ThreadInputFile(threading.Thread):
                 file = open(fn, "rb")
                 self.split_lines_buf = b""
             st_size = st.st_size
-            time.sleep(args.polltv)
+            time.sleep(sysarg.polltv)
 
 
 class ThreadInputUdp(threading.Thread):
@@ -126,14 +131,14 @@ class ThreadInputUdp(threading.Thread):
             self.q.put((addr, msg))
 
 
-class Ui:
-    def __init__(self):
+class MainUi:
+    def __init__(self, title="ulogview"):
         self.root = tk.Tk()
-        self.root.title("ulogview")
+        self.root.title(title)
         self.root.geometry('800x800+200+200') # yscroll=True时需要设，否则窗口很小
         fr = tk.Frame(self.root)
 
-        column_list = [("", 180), (",w", "100,w+")]
+        column_list = [(",w", "180,w"), (",w", "100,w+")]
         ui_tree = TkYzwFrameTree(self.root, column_list, scroll="xy", height=10)
         # show="tree" 无抬头栏；  show="headings" 有抬头
         self.ui_tree = ui_tree
@@ -211,6 +216,7 @@ def _getopt():
     parser.add_argument('-f', '--file', type=str, default="", help='load from logfile')
     parser.add_argument('-u', '--udp', type=int, default=17878, help='listen on udp port')
     parser.add_argument('-l', '--log', type=str, default="", help='write to logfile')
+    parser.add_argument("-n", "--with_lineno", action="store_true", default=False, help="parse lineno")
     parser.add_argument('--source_encoding', type=str, default="gbk", help='source(file/udp) encoding')
     parser.add_argument('--log_encoding', type=str, default="gbk", help='write logfile encoding')
     parser.add_argument('--polltv', type=float, default=0.3, help='write logfile encoding')
@@ -218,21 +224,23 @@ def _getopt():
     return parser.parse_args(argv)
 
 
-args = _getopt()
-print(args)
+sysarg = _getopt()
+print(sysarg)
 g = MyGlobals()
-if args.log:
-    log = open(args.log, "w", encoding=args.log_encoding)
+if sysarg.log:
+    log = open(sysarg.log, "w", encoding=sysarg.log_encoding)
 else:
     log = None
 
-if args.file:
+if sysarg.file:
     # D:\tx\src\frpy\py\robot_rmf_7808.log
     # ulogview_sample.log
-    ThreadInputFile(g.q, fn=args.file, encoding=args.source_encoding).start()
+    ThreadInputFile(g.q, fn=sysarg.file, encoding=sysarg.source_encoding).start()
+    mainui = MainUi(title=sysarg.file)
+
 else:
-    ThreadInputUdp(g.q, host="0.0.0.0", port=args.udp, encoding=args.source_encoding).start()
+    ThreadInputUdp(g.q, host="0.0.0.0", port=sysarg.udp, encoding=sysarg.source_encoding).start()
+    mainui = MainUi(title=sysarg.udp)
 
 
-ui = Ui()
-ui.root.mainloop()
+mainui.root.mainloop()
