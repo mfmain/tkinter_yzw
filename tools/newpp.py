@@ -1,8 +1,20 @@
 # coding： gbk
 
+USAGE = """
+USAGE: newpp.py [options] <src> <dst>:
+  依次使用"原始时间", "图片时间", "文件名中的时间", "文件时间戳"的优先级提取src目录下的图片文件的"目标文件夹"
+  如果f"dst/{目的文件夹}"下, 已经存在同名文件, 则进行比较, 相同则归类到"same"分支下面
+  -t, --todir 另行指定拷贝和移动的目标文件夹
+  -k, --keepsame 如果目标文件已存在仍然保留源文件
+  -r, --depth 遍历子目录
+  -c, --content_compare 逐字节对比src和dst下同名文件是否相同, 默认只要文件大小相同就认为相同
+  -v, --verbose 打印详细日志
+  -n, --dryrun 不实际执行拷贝和移动操作 
+"""
+
 # DEBUGME:
-#    --to E:\w\newpp2 J:\DCIM\100CANON \\192.168.1.111\e\w\newpp
-#    --to \\192.168.1.111\e\w\newpp.to J:\DCIM\100CANON \\192.168.1.111\e\w\newpp
+#    --todir E:\w\newpp2 J:\DCIM\100CANON \\192.168.1.111\e\w\newpp
+#    --todir \\192.168.1.111\e\w\newpp.to J:\DCIM\100CANON \\192.168.1.111\e\w\newpp
 
 import os, sys, time, shutil
 import exifread as exif
@@ -18,7 +30,6 @@ import win32api
 import subprocess
 # from PIL import Image
 # import cv2
-
 
 
 def img_show(fn):
@@ -59,6 +70,7 @@ class CSTA:
 
 def opt_parse(argv):
     parser = argparse.ArgumentParser(description='gather photoes')
+    parser.error = lambda msg: (print(USAGE), sys.exit(1))
     parser.add_argument('srcdir',                  type=str,                  help='compare srcdir')
     parser.add_argument('dstdir',                  type=str,                  help='compare dstdir')
     parser.add_argument('-t', "--todir",           type=str,                  help='copy/move to dir')
@@ -198,7 +210,7 @@ def is_same(fn1, fn2):
 class MainUi(TkYzwMainUi):
     def __init__(self):
         super().__init__(title="newpp", geometry='800x500+200+200')
-        w = TkYzwFrameTree(self.root, column_list=[("源文件,w", 300), ("目的文件夹,w", "100,w+")], scroll="xy", height=10,
+        w = TkYzwFrameTree(self.root, column_list=[("源文件,w", "300,w"), ("目的文件夹,w", "100,w+")], scroll="xy", height=10,
                                  command=lambda iid, event: self.on_callback("tree_command", iid, event))
         w.pack(side="top", fill="both", expand=1)
         self.ui_tree = w
@@ -328,7 +340,7 @@ class MainApp(TkYzwMainUiApp):
 if __name__=="__main__":
     sta = CSTA()
     opt = opt_parse(sys.argv[1:])
-    opt.dryrun = 1
+    # opt.dryrun = 1
 
     # main_newpp(opt.srcdir, opt.dstdir)
 

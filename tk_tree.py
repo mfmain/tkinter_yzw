@@ -31,7 +31,7 @@ def list_get(a:list, i:int, default:any):
 
 
 class TkYzwFrameTree(tk.Frame):
-    def __init__(self, master, column_list, width_list:list=None, command=None, on_select=None, heading_command=None, scroll="", **kw):
+    def __init__(self, master, column_list, width_list:list=None, command=None, on_select=None, heading_command=None, scroll="", dnd="", **kw):
         """
         推荐格式: column_list = [("tag", 120), ("desc,w", "100,w+"), ...("列名,列名anchor", "列宽,内容行anchor")] 分别对应column=['#0', 'c1', 'c2', ...]  #0是树节点
         或早期格式: column_list = ["tag", "desc,w", ..."列名,列名anchor"] width_list=[120, "100,w+", ..."列宽,内容行anchor"]
@@ -45,8 +45,9 @@ class TkYzwFrameTree(tk.Frame):
 
         self.cb_command = command
         self.cb_on_select = on_select
-
-        super().__init__(master, **kw)
+        kw2 = kw.copy()
+        kw2.pop("show", None)
+        super().__init__(master, **kw2)
         self.master = master
         fr = self
 
@@ -139,6 +140,13 @@ class TkYzwFrameTree(tk.Frame):
             tree.configure(xscroll=xsb.set)
             xsb.grid(row=1, column=0, sticky='ew')
 
+        if dnd:
+            tree.bind("<ButtonPress-1>", self.on_dnd_enter, add='+')
+            tree.bind("<ButtonRelease-1>", self.on_dnd_leave, add='+')
+            tree.bind("<B1-Motion>", self.on_dnd_move, add='+')
+            tree.bind("<Shift-ButtonPress-1>", self.on_dnd_enter_block, add='+')
+            # tree.bind("<Shift-ButtonRelease-1>", self.on_dnd_leave_block, add='+')
+
         #fr.bind("<F1>", self.on_F1)
         #fr.bind("<F3>", self.on_F3)
         #fr.bind("<Control-c>", self.on_COPY)
@@ -147,6 +155,30 @@ class TkYzwFrameTree(tk.Frame):
         self.bind("X", self.on_key_X)
         self.bind("<Control-c>", self.on_key_ctrl_c)
         self.bind("<Control-a>", self.on_key_ctrl_a)
+
+    def on_dnd_enter_block(self, event):
+        tv = event.widget
+        select = [tv.index(s) for s in tv.selection()]
+        select.append(tv.index(tv.identify_row(event.y)))
+        select.sort()
+        for i in range(select[0], select[-1] + 1, 1):
+            tv.selection_add(tv.get_children()[i])
+
+    def on_dnd_enter(self, event):
+        tv = event.widget
+        if tv.identify_row(event.y) not in tv.selection():
+            tv.selection_set(tv.identify_row(event.y))
+
+    def on_dnd_leave(self, event):
+        tv = event.widget
+        if tv.identify_row(event.y) in tv.selection():
+            tv.selection_set(tv.identify_row(event.y))
+
+    def on_dnd_move(self, event):
+        tv = event.widget
+        moveto = tv.index(tv.identify_row(event.y))
+        for s in tv.selection():
+            tv.move(s, '', moveto)
 
     def bind(self, sequence, func):
         self.wx.bind(sequence, func)
@@ -184,7 +216,7 @@ class TkYzwFrameTree(tk.Frame):
         print("dump_selection:")
         iids = self.wx.selection()  # type: tuple  # 刚启动时,未选择任何东西,返回空tuple
         for i, iid in enumerate(iids):
-            print('  [%d] iid=%s text=%s' % (i, iid, self.wx.item(iid, 'text')))
+            print(f'  [{i}] iid={iid} text={self.wx.item(iid, "text")}')
 
     # def iter_children(self, iid:str):
     #     print("iter_children", iid)
@@ -550,7 +582,7 @@ if __name__ == '__main__':
             # 建议使用column_list的新格式, 每一项为(column, width), 其中column/width都可以有anchor,前者表示各title的anchor, 后者表示row中各列的anchor
             column_list = [("tag,w", "120,w"), ("时间", 100), ("来源", 100), ("分类","50:100,w"), ("信息,w", "100,w+")]
 
-            ui_tree = TkYzwFrameTree(self.root, column_list, scroll="xy", height=10, on_select=self.on_select, command=self.on_command, heading_command=self.on_heading)
+            ui_tree = TkYzwFrameTree(self.root, column_list, scroll="xy", height=10, on_select=self.on_select, command=self.on_command, heading_command=self.on_heading, dnd="move")
             # show="tree" 无抬头栏(无法拖拽列宽)；  show="headings" 有抬头
             self.ui_tree = ui_tree
             #ui_tree.wx.column('#0', stretch="no", minwidth=0, width=0)

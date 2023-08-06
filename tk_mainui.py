@@ -172,6 +172,9 @@ class TkYzwMainUiApp:
         #     "exit": self.on_ui_exit
         # }
 
+    def run(self):
+        self.mainui.run()
+
     def on_ui_exit(self, *la, **ka):
         self.mainui.do_exit()
 
@@ -289,5 +292,5 @@ if __name__ == '__main__':
     mainui = MainUi()
     mainq = mainui.mainq
     mainapp = MainApp(mainui, idle_timers=[0.5, 3])
-    mainui.run()
+    mainapp.run()
     print("bye")
