@@ -145,6 +145,25 @@ class TkYzwMainUi:
             func(widget, *la, **ka)
 
 
+class TkYzwTimer(threading.Thread):
+    def __init__(self, q:queue.Queue, tvsec:int, count:int=-1):
+        super().__init__()
+        self.daemon = True
+        self.mainq = q
+        self.tvsec = tvsec
+        self.count = count
+
+    def run(self):
+        q = self.mainq
+        while self.count != 0:
+            self.count -= 1
+            time.sleep(self.tvsec)
+            q.put(("timer", self.tvsec))
+
+    def exit(self):
+        self.count = 0
+
+
 class TkYzwMainUiApp:
     """
     通过mainq串行化事件（包括定时器），回调函数中无须加锁
@@ -152,17 +171,19 @@ class TkYzwMainUiApp:
     ui事件在on_ui_{callbackid}中触发
     其他事件 on_mainq
     """
-    def __init__(self, mainui:TkYzwMainUi, enable_idle=None, idle_timers=None):
+    def __init__(self, mainui:TkYzwMainUi, timers=None, enable_idle=None, idle_timers=None):
         """
         # param enable_idle：None or float
         #     mainq中idle多长时间触发on_idle
         #     缺省为None，即不启用idle机制，即便重载了self.on_idle，也不会被调用
-        # param timers：None or list of float
+        # param idle_timers：None or list of float
         #     如果没有打开enable_idle，会自动打开enable_idle=0.01
         #     可设置多个定时器，idle_timers=定时器时长列表，单位为秒，浮点数，
         #     该定时器，基于idle的lazy判断，所以不保证实时性，系统没事干的时候才会触发，一直忙则一直不触发，精度依赖enable_idle参数
         #     要实现精确的定时器，可自行构造一个独立的线程发送定时器消息给q
         """
+        if timers is None: timers = []
+
         self.mainui = mainui
         self.mainq = mainui.mainq
         threading.Thread(target=self.thproc_mainloop, args=(enable_idle, idle_timers), daemon=True).start()
@@ -171,6 +192,9 @@ class TkYzwMainUiApp:
         #     "demo_command": self.on_ui_demo_command,
         #     "exit": self.on_ui_exit
         # }
+        self.a_thrtimer = []
+        for tvsec in timers: self.a_thrtimer.append(TkYzwTimer(self.mainq, tvsec))
+        for x in self.a_thrtimer: x.start()
 
     def run(self):
         self.mainui.run()
@@ -210,7 +234,10 @@ class TkYzwMainUiApp:
                             self.on_idle_timer(cycle)
                     continue
 
-                if msgtype == 'exit':
+                if msgtype == 'timer':
+                    tvsec = argv[0]
+                    self.on_timer(tvsec)
+                elif msgtype == 'exit':
                     break
                 elif msgtype == 'ui':
                     callbackid, la, ka = argv
@@ -222,6 +249,7 @@ class TkYzwMainUiApp:
             except:
                 traceback.print_exc()
                 continue
+        for x in self.a_thrtimer: x.exit()
         self.on_app_exit()
 
     def on_app_exit(self):
@@ -229,6 +257,9 @@ class TkYzwMainUiApp:
 
     def on_mainq(self, msgtype, *argv):
         print(f"{msgtype} {argv}")
+
+    def on_timer(self, tvsec:float):
+        print(f"timer {tvsec}")
 
     def on_idle(self):
         # print("idle")
@@ -240,11 +271,10 @@ class TkYzwMainUiApp:
 
 if __name__ == '__main__':
 
-    def thproc_timer():
+    def thproc_demo():
         while True:
-            mainq.put(("timer", None))
+            mainq.put(("demo", None))
             time.sleep(5)
-
 
     class MainUi(TkYzwMainUi):
         def __init__(self):
@@ -265,12 +295,12 @@ if __name__ == '__main__':
             w.pack(side="top", padx=10, pady=5)
 
     class MainApp(TkYzwMainUiApp):
-        def __init__(self, mainui:TkYzwMainUi, enable_idle=None, idle_timers=None):
+        def __init__(self, mainui:TkYzwMainUi, *la, **ka):
 
             # user init codes here
 
-            super().__init__(mainui, enable_idle, idle_timers)
-            threading.Thread(target=thproc_timer, args=(), daemon=True).start()
+            super().__init__(mainui, *la, **ka)
+            threading.Thread(target=thproc_demo, args=(), daemon=True).start()
 
         def on_ui_demo_bind_double1(self, event):
             print(f"on_ui_demo_bind_double1: event={event}")
@@ -279,11 +309,7 @@ if __name__ == '__main__':
             print(f"on_ui_demo_command_option_menu {v}")
 
         def on_mainq(self, msgtype, *argv):
-            if msgtype == 'timer':
-                # print(f"timer {mainui.on_idle_cnt}")
-                print(f"timer")
-            else:
-                print(f"{msgtype} {msga}")
+            print(f"{msgtype} {argv}")
 
 
     import threading
@@ -291,6 +317,6 @@ if __name__ == '__main__':
 
     mainui = MainUi()
     mainq = mainui.mainq
-    mainapp = MainApp(mainui, idle_timers=[0.5, 3])
+    mainapp = MainApp(mainui, timers=[1], idle_timers=[0.5, 3])
     mainapp.run()
     print("bye")
