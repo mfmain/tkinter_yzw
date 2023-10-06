@@ -164,7 +164,7 @@ class MainUi:
         if selected_item:
             tree.delete(selected_item)
 
-    def context_menu_find_next(self, node:str, content:str):
+    def context_menu_find_next(self, what:str, node_only:int):
         tree = self.ui_tree.wx
         current_item = tree.selection()
         if not current_item:
@@ -196,8 +196,14 @@ class MainUi:
                         current_item = None
 
             if current_item:
-                item_values = tree.item(current_item, "values")
-                if item_values and any(node.lower() in value.lower() for value in item_values):
+                if node_only:
+                    item_text = tree.item(current_item, "text")
+                    found = item_text and what.lower() in item_text.lower()
+                else:
+                    item_values = tree.item(current_item, "values")
+                    found = item_values and any(what.lower() in value.lower() for value in item_values)
+
+                if found:
                     tree.selection_set(current_item)
                     tree.focus(current_item)
                     tree.see(current_item)
@@ -212,21 +218,19 @@ class MainUi:
         selected_item = tree.selection()
         if selected_item:
             # 创建一个简单的编辑对话框
-            edit_dialog = tk.Toplevel()
-            edit_dialog.title("Find")
+            find_dialog = tk.Toplevel()
+            find_dialog.title("Find")
 
-            tk.Label(edit_dialog, text="Node:").grid(row=0, column=0)
-            wx_node_entry = tk.Entry(edit_dialog)
-            wx_node_entry.grid(row=0, column=1)
+            wx_what_entry = tk.Entry(find_dialog)
+            wx_what_entry.pack(side="top")
 
-            tk.Label(edit_dialog, text="Content:").grid(row=1, column=0)
-            wx_content_entry = tk.Entry(edit_dialog)
-            wx_content_entry.grid(row=1, column=1)
+            wxv_check1 = tk.IntVar(value=1)
+            tk.Checkbutton(find_dialog, text="search node only", variable=wxv_check1).pack(side="top")
 
-            search_button = tk.Button(edit_dialog, text="Search",
-                                    command=lambda: self.context_menu_find_next(wx_node_entry.get(), wx_content_entry.get()))
-            search_button.grid(row=2, columnspan=2)
-            wx_node_entry.focus_set()
+            search_button = tk.Button(find_dialog, text="Search",
+                                    command=lambda: self.context_menu_find_next(wx_what_entry.get(), wxv_check1.get()))
+            search_button.pack(side="top")
+            wx_what_entry.focus_set()
 
     def on_timer(self):
         for addr, x in q_nonblock_polling(g.q):
