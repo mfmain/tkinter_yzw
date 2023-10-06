@@ -15,7 +15,7 @@ import threading
 import argparse
 import tkinter as tk
 from tkinter_yzw.tk_tree import TkYzwFrameTree
-
+from tkinter.messagebox import showinfo
 
 # if sys.platform == 'win32':
 #     CRLF = b'\r\n'
@@ -150,7 +150,83 @@ class MainUi:
         # self.ui_tree.easy_item("状态/连接信息", value="xxx")
         ui_tree.pack(side="top", fill="both", expand=1)
 
+        menu = tk.Menu(ui_tree.wx, tearoff=0)
+        menu.add_command(label="Delete", command=self.context_menu_delete)
+        menu.add_command(label="Find", command=self.context_menu_find)
+        ui_tree.wx.bind("<Button-3>", lambda event: menu.post(event.x_root, event.y_root))
+        self.context_menu = menu
+
         self.on_timer()
+
+    def context_menu_delete(self):
+        tree = self.ui_tree.wx
+        selected_item = tree.selection()
+        if selected_item:
+            tree.delete(selected_item)
+
+    def context_menu_find_next(self, node:str, content:str):
+        tree = self.ui_tree.wx
+        current_item = tree.selection()
+        if not current_item:
+            current_item = tree.get_children()[0]
+        else:
+            current_item = current_item[0]
+
+        while current_item:
+            # 尝试找到第一个子节点
+            first_child = tree.get_children(current_item)
+            if first_child:
+                current_item = first_child[0]
+            else:
+                # 如果没有子节点，尝试找到下一个兄弟节点
+                next_item = tree.next(current_item)
+                if next_item:
+                    current_item = next_item
+                else:
+                    # 如果没有下一个兄弟节点，尝试找到父节点的下一个兄弟节点
+                    parent_item = tree.parent(current_item)
+                    while parent_item:
+                        next_parent = tree.next(parent_item)
+                        if next_parent:
+                            current_item = next_parent
+                            break
+                        parent_item = tree.parent(parent_item)
+                    else:
+                        # 如果没有父节点的下一个兄弟节点，结束搜索
+                        current_item = None
+
+            if current_item:
+                item_values = tree.item(current_item, "values")
+                if item_values and any(node.lower() in value.lower() for value in item_values):
+                    tree.selection_set(current_item)
+                    tree.focus(current_item)
+                    tree.see(current_item)
+                    break
+
+        if not current_item:
+            print("No more matching items found.")
+            showinfo("Search", "No more matching items found.")
+
+    def context_menu_find(self):
+        tree = self.ui_tree.wx
+        selected_item = tree.selection()
+        if selected_item:
+            # 创建一个简单的编辑对话框
+            edit_dialog = tk.Toplevel()
+            edit_dialog.title("Find")
+
+            tk.Label(edit_dialog, text="Node:").grid(row=0, column=0)
+            wx_node_entry = tk.Entry(edit_dialog)
+            wx_node_entry.grid(row=0, column=1)
+
+            tk.Label(edit_dialog, text="Content:").grid(row=1, column=0)
+            wx_content_entry = tk.Entry(edit_dialog)
+            wx_content_entry.grid(row=1, column=1)
+
+            search_button = tk.Button(edit_dialog, text="Search",
+                                    command=lambda: self.context_menu_find_next(wx_node_entry.get(), wx_content_entry.get()))
+            search_button.grid(row=2, columnspan=2)
+            wx_node_entry.focus_set()
 
     def on_timer(self):
         for addr, x in q_nonblock_polling(g.q):
