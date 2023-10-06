@@ -164,7 +164,7 @@ class MainUi:
         if selected_item:
             tree.delete(selected_item)
 
-    def context_menu_find_next(self, what:str, node_only:int):
+    def context_menu_find_next(self, what:str, with_node:int, with_content:int):
         tree = self.ui_tree.wx
         current_item = tree.selection()
         if not current_item:
@@ -196,10 +196,11 @@ class MainUi:
                         current_item = None
 
             if current_item:
-                if node_only:
+                found = False
+                if with_node:
                     item_text = tree.item(current_item, "text")
                     found = item_text and what.lower() in item_text.lower()
-                else:
+                if not found and with_content:
                     item_values = tree.item(current_item, "values")
                     found = item_values and any(what.lower() in value.lower() for value in item_values)
 
@@ -224,11 +225,15 @@ class MainUi:
             wx_what_entry = tk.Entry(find_dialog)
             wx_what_entry.pack(side="top")
 
+            fr = tk.Frame(find_dialog)
             wxv_check1 = tk.IntVar(value=1)
-            tk.Checkbutton(find_dialog, text="search node only", variable=wxv_check1).pack(side="top")
+            tk.Checkbutton(fr, text="node", variable=wxv_check1).pack(side="left")
+            wxv_check2 = tk.IntVar(value=0)
+            tk.Checkbutton(fr, text="content", variable=wxv_check2).pack(side="left")
+            fr.pack(side="top")
 
             search_button = tk.Button(find_dialog, text="Search",
-                                    command=lambda: self.context_menu_find_next(wx_what_entry.get(), wxv_check1.get()))
+                                    command=lambda: self.context_menu_find_next(wx_what_entry.get(), wxv_check1.get(), wxv_check2.get()))
             search_button.pack(side="top")
             wx_what_entry.focus_set()
 
