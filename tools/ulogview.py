@@ -1,6 +1,6 @@
 # coding: gbk
 
-# py39cli & pyinstaller -F -w --exclude numpy ulogview.py & copy dist\ulogview.exe d:\s\bin /y
+# py3xcli & pyinstaller -F -w --exclude numpy ulogview.py & copy dist\ulogview.exe d:\s\bin /y
 # DEBUG_ARG: -f ulogview_sample.log -l d:\^\ulogview.log
 #            -f D:\tx\src\frpy\py\robot_rmf_7808.log
 #            -u 17878 ȱʡ

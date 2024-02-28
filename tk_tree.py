@@ -457,6 +457,10 @@ class TkYzwFrameTree(tk.Frame):
         # ixxx :text    msg  # 在路径xxx下面插入匿名节点(系统自动提供), 冒号后面为节点上显示的文本
         # ixxx :<ts>    msg  # 在路径xxx下面插入匿名节点(系统自动提供), 节点上显示时间戳
 
+        # zxxx/yyy 0         # folder close 取名vim的z功能
+        # zxxx/yyy 1         # folder open
+        # txxx/yyy tag1 tag2 tag3 ...  # h1,h2,h3,red,green,blue,grey
+
         # 高级命令:
         # `<exec_source_code>  # 直接调用self.<exec_source_code>
         # `easy_inert(path, _iid, index=0...)
@@ -466,6 +470,7 @@ class TkYzwFrameTree(tk.Frame):
             if not rootpath_:
                 rootpath_ = rootpath + '/'
         action, cmda = cmd[0], cmd[1:]
+
         if action == 'r':
             a = cmda.split(maxsplit=1)  # iid, msg
             relpath = a[0]
@@ -473,9 +478,26 @@ class TkYzwFrameTree(tk.Frame):
                 self.easy_item(rootpath, values=(list_get(a, 1, ""),))
             else:
                 self.easy_item(rootpath_ + relpath, values=(list_get(a, 1, ""),))
+
         elif action == 'R':
             a = cmda.split(maxsplit=1)  # iid, msg
             self.easy_item(rootpath_ + a[0], index="end", values=(list_get(a, 1, ""),))
+
+        elif action == 'z':
+            # fold
+            a = cmda.split(maxsplit=1)  # iid, bopen
+            try:
+                bopen = eval(a[1])
+            except:
+                bopen = True
+            self.easy_item(rootpath_ + a[0], open=bopen)
+
+        elif action == 't':
+            # tag
+            a = cmda.split()  # iid, tags...
+            tag=a[1:]
+            self.easy_item(rootpath_ + a[0], tags=tag)
+
         elif action == 'i':
             a = cmda.split(maxsplit=2)  # iid_parent iid_new:text msg
             iid_parent = rootpath_ + a[0] if a[0] != '.' else rootpath
