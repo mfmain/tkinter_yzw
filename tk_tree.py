@@ -176,9 +176,21 @@ class TkYzwFrameTree(tk.Frame):
 
     def on_dnd_move(self, event):
         tv = event.widget
-        moveto = tv.index(tv.identify_row(event.y))
+
+        # 取目标位置
+        iid = tv.identify_row(event.y)
+        if not iid: return
+        parent = tv.parent(iid)  # 目标父节点
+        moveto = tv.index(iid)   # 目标兄弟节点的排行, 从0开始编号
+
+        # 移动源到目标位置
         for s in tv.selection():
-            tv.move(s, '', moveto)
+            # 源和目标的父节点不同, 不允许移动
+            if tv.parent(s) != parent:
+                continue
+            if s == iid:
+                continue
+            tv.move(s, parent, moveto)
 
     def bind(self, sequence, func):
         self.wx.bind(sequence, func)
@@ -216,7 +228,9 @@ class TkYzwFrameTree(tk.Frame):
         print("dump_selection:")
         iids = self.wx.selection()  # type: tuple  # 刚启动时,未选择任何东西,返回空tuple
         for i, iid in enumerate(iids):
-            print(f'  [{i}] iid={iid} text={self.wx.item(iid, "text")}')
+            parent = self.wx.parent(iid)
+            index = self.wx.index(iid)  # 兄弟节点排行
+            print(f'  [{i}] iid={iid} text={self.wx.item(iid, "text")} parent={parent} index={index}')
 
     # def iter_children(self, iid:str):
     #     print("iter_children", iid)
@@ -237,10 +251,10 @@ class TkYzwFrameTree(tk.Frame):
             self.iter_children(x, a)
         return a
 
-    def get_all_children(tree, item=""):
+    def get_all_children(self, item=""):
         children = self.wx.get_children(item)
         for child in children:
-            children += get_all_children(self.wx, child)
+            children += self.get_all_children(child)
         return children
 
     def on_tree_release1(self, event):
@@ -267,22 +281,25 @@ class TkYzwFrameTree(tk.Frame):
         except:
             pass
 
-    def do_deltree(self, iid:str):
+    def do_deltree(self, iid:str, keepself=False):
         for i in self.iter_children(iid):
             if i in self.all_user_defined_iids:
                 self.all_user_defined_iids.discard(i)
 
-        try:
-            self.wx.delete(iid)  # 删除本身及其子节点
-        except:
-            pass
-
-        # if include:
-        #     # 删除本身及其子节点
-        #     self.wx.delete(iid)
-        # else:
-        #     # 删除子节点, 保留自身
-        #     for i in self.iter_children(iid): self.wx.delete(i)
+        if keepself:
+            # 删除子节点, 保留自身
+            for i in self.iter_children(iid):
+                if i != iid:
+                    try:
+                        self.wx.delete(i)
+                    except:
+                        pass
+        else:
+            # 删除本身及其子节点
+            try:
+                self.wx.delete(iid)
+            except:
+                pass
 
     def do_deltree_selected(self):
         for iid in self.wx.selection():  # tuple
@@ -378,6 +395,7 @@ class TkYzwFrameTree(tk.Frame):
 
     def easy_item(self, path:str, index="end", sorted_key=None, reversed=False, **kw):
         """ 设置指定路径的节点
+            easy_item(path, values=((c1, 1, ""))
 
         easy系列使用路径格式来规范节点的iid
         与easy_insert相比,这个无法插入匿名节点
@@ -472,6 +490,7 @@ class TkYzwFrameTree(tk.Frame):
         action, cmda = cmd[0], cmd[1:]
 
         if action == 'r':
+            # rxxx/yyy msg       # 更改路径xxx/yyy的msg, 如果不存在,则插入
             a = cmda.split(maxsplit=1)  # iid, msg
             relpath = a[0]
             if relpath == '.':
@@ -480,6 +499,7 @@ class TkYzwFrameTree(tk.Frame):
                 self.easy_item(rootpath_ + relpath, values=(list_get(a, 1, ""),))
 
         elif action == 'R':
+            # Rxxx/yyy msg       # R,r的区别在于r在头部插入,R在尾部插入,其他用法相同
             a = cmda.split(maxsplit=1)  # iid, msg
             self.easy_item(rootpath_ + a[0], index="end", values=(list_get(a, 1, ""),))
 
@@ -524,10 +544,13 @@ class TkYzwFrameTree(tk.Frame):
         elif action == 'X':
             self.do_clear()
         elif action == 'x':
+            keepself = cmda.endswith("/")
+            if keepself:
+                cmda = cmda[:-1]
             if cmda == '.':
-                self.do_deltree(rootpath)
+                self.do_deltree(rootpath, keepself=keepself)
             else:
-                self.do_deltree(rootpath_ + cmda)
+                self.do_deltree(rootpath_ + cmda, keepself=keepself)
         elif action == '`':
             try:
                 exec("self." + cmda)
