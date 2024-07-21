@@ -74,6 +74,8 @@ class TkYzwMainUi:
         if geometry:
             self.root.geometry(geometry)
 
+        self.after_ms = 0
+        self.after_func = None
         self.after_id = None
 
         self.root_destroyed = False
@@ -88,7 +90,22 @@ class TkYzwMainUi:
         return d
 
     def after(self, ms:int, func):
-        self.after_id = self.root.after(ms, func)
+        self.after_ms = ms
+        self.after_func = func
+        if ms == 0 or func is None:
+            # 取消timer
+            if self.after_id:
+                self.root.after_cancel(self.after_id)
+            self.after_ms = 0
+            self.after_func = None
+            self.after_id = None
+        else:
+            # 设置timer
+            self.after_id = self.root.after(ms, self.on_after)
+
+    def on_after(self):
+        self.after_func()
+        self.after_id = self.root.after(self.after_ms, self.on_after)
 
     def on_root_destroy(self):
         pass
@@ -171,7 +188,7 @@ class TkYzwMainUiApp:
     ui事件在on_ui_{callbackid}中触发
     其他事件 on_mainq
     """
-    def __init__(self, mainui:TkYzwMainUi, timers=None, enable_idle=None, idle_timers=None):
+    def __init__(self, mainui:TkYzwMainUi, tk_after=0, timers=None, enable_idle=None, idle_timers=None):
         """
         # param enable_idle：None or float
         #     mainq中idle多长时间触发on_idle
@@ -185,6 +202,7 @@ class TkYzwMainUiApp:
         if timers is None: timers = []
 
         self.mainui = mainui
+
         self.mainq = mainui.mainq
         threading.Thread(target=self.thproc_mainloop, args=(enable_idle, idle_timers), daemon=True).start()
         # self.ui_dispatcher = {
@@ -195,6 +213,8 @@ class TkYzwMainUiApp:
         self.a_thrtimer = []
         for tvsec in timers: self.a_thrtimer.append(TkYzwTimer(self.mainq, tvsec))
         for x in self.a_thrtimer: x.start()
+        if tk_after:
+            mainui.after(tk_after, self.on_tk_after)
 
     def run(self):
         self.mainui.run()
@@ -234,11 +254,11 @@ class TkYzwMainUiApp:
                             self.on_idle_timer(cycle)
                     continue
 
-                if msgtype == 'timer':
-                    tvsec = argv[0]
-                    self.on_timer(tvsec)
-                elif msgtype == 'exit':
+                if msgtype == 'exit':
                     break
+                elif msgtype == 'timer':
+                    tvsec = argv[0]
+                    self.on_mainq_timer(tvsec)
                 elif msgtype == 'ui':
                     callbackid, la, ka = argv
                     # mainui.mainui_dispatch(argv[0], self.ui_dispatcher)
@@ -256,17 +276,22 @@ class TkYzwMainUiApp:
         pass
 
     def on_mainq(self, msgtype, *argv):
-        print(f"{msgtype} {argv}")
+        print(f"on_mainq {msgtype} {argv}")
 
-    def on_timer(self, tvsec:float):
-        print(f"timer {tvsec}")
+    def on_tk_after(self):
+        # 注意, 这是在tk主线程中执行, 与mainq不是一个线程, 有竞争, 所以不要有主逻辑, 只能进行界面更新
+        print(f"on_tk_after")
 
-    def on_idle(self):
-        # print("idle")
-        pass
+    def on_mainq_timer(self, tvsec:float):
+        print(f"on_mainq_timer {tvsec}")
 
     def on_idle_timer(self, cycle:float):
-        print(f"idle_timer {cycle}")
+        # 注意一直很忙时, 不会被调度到
+        print(f"on_idle_timer {cycle}")
+
+    def on_idle(self):
+        # 不要乱搞, 调用次数很频繁的
+        pass
 
 
 if __name__ == '__main__':
@@ -317,6 +342,6 @@ if __name__ == '__main__':
 
     mainui = MainUi()
     mainq = mainui.mainq
-    mainapp = MainApp(mainui, timers=[1], idle_timers=[0.5, 3])
+    mainapp = MainApp(mainui, timers=[1], tk_after=1000, idle_timers=[0.5, 3])
     mainapp.run()
     print("bye")
