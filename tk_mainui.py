@@ -334,7 +334,7 @@ if __name__ == '__main__':
             print(f"on_ui_demo_command_option_menu {v}")
 
         def on_mainq(self, msgtype, *argv):
-            print(f"{msgtype} {argv}")
+            print(f"on_mainq {msgtype} {argv}")
 
 
     import threading

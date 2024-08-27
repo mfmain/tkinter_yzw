@@ -33,14 +33,19 @@ def list_get(a:list, i:int, default:any):
 class TkYzwFrameTree(tk.Frame):
     def __init__(self, master, column_list, width_list:list=None, command=None, on_select=None, heading_command=None, scroll="", dnd="", **kw):
         """
-        推荐格式: column_list = [("tag", 120), ("desc,w", "100,w+"), ...("列名,列名anchor", "列宽,内容行anchor")] 分别对应column=['#0', 'c1', 'c2', ...]  #0是树节点
-        或早期格式: column_list = ["tag", "desc,w", ..."列名,列名anchor"] width_list=[120, "100,w+", ..."列宽,内容行anchor"]
+        推荐格式: column_list = [("tag", 120), ("desc,w", "100,w+"), ...("抬头列名,抬头列anchor", "列宽,内容行anchor")] 分别对应column=['#0', 'c1', 'c2', ...]  #0是树节点
+               或早期格式: column_list = ["tag", "desc,w", ..."列名,列名anchor"] width_list=[120, "100,w+", ..."列宽,内容行anchor"]
+               抬头列anchor表示heading行的每一列的anchor, 不写表示默认center
+               ("tag", 120)表示这一列的抬头写tag,居中对齐, 列宽120, 下面的内容行居中对齐
+               ("desc,w", "100,w+")表示这一列抬头写desc,左对齐, 列宽100, 下面的内容行左对齐
         command: 双击某个单元格时调用，同时on_select也会被调用
         on_select: 选择时调用(单击某行单选, 按shift片选, 按ctrl多选)
         heading_command： 单击抬头时调用
+        dnd: drag and drop模式 "move"或""
         kw:
-            show="tree" 无抬头栏；  show="headings" 有抬头  # 无抬头无法拉伸单列的列宽
-
+            show缺省, 既显示抬头又树
+            show="tree" 只显示树, 无抬头栏；
+            show="headings" 只显示抬头  # 无抬头无法拉伸单列的列宽
         """
 
         self.cb_command = command
@@ -630,7 +635,7 @@ if __name__ == '__main__':
             ui_tree = TkYzwFrameTree(self.root, column_list, scroll="xy", height=10, on_select=self.on_select, command=self.on_command, heading_command=self.on_heading, dnd="move")
             # show="tree" 无抬头栏(无法拖拽列宽)；  show="headings" 有抬头
             self.ui_tree = ui_tree
-            #ui_tree.wx.column('#0', stretch="no", minwidth=0, width=0)
+            # ui_tree.wx.column('#0', stretch="no", minwidth=10, width=10)
 
             self.tree_branches = ["当前任务", "已完成任务", 'sorted', 'logs']  # '成交e', '委托op', '成交op',
 

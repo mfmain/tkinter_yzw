@@ -139,7 +139,7 @@ class MainUi:
         fr = tk.Frame(self.root)
 
         column_list = [(",w", "180,w"), (",w", "100,w+")]
-        ui_tree = TkYzwFrameTree(self.root, column_list, scroll="xy", height=10)
+        ui_tree = TkYzwFrameTree(self.root, column_list, scroll="xy", height=10)  # , dnd="move"
         # show="tree" 无抬头栏；  show="headings" 有抬头
         self.ui_tree = ui_tree
         # ui_tree.wx.column('#0', stretch="no", minwidth=0, width=0)
