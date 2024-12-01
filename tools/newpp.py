@@ -1,11 +1,11 @@
 # coding： gbk
 
 USAGE = """
-USAGE: newpp.py [options] <src> <dst>:
+USAGE: newpp.py [options] <srcdir> <dstdir>:
   依次使用"原始时间", "图片时间", "文件名中的时间", "文件时间戳"的优先级提取src目录下的图片文件的"目标文件夹"
   如果f"dst/{目的文件夹}"下, 已经存在同名文件, 则进行比较, 相同则归类到"same"分支下面
-  -t, --todir 另行指定拷贝和移动的目标文件夹
-  -k, --keepsame 如果目标文件已存在仍然保留源文件
+  -t, --todir 另行指定拷贝和移动的目标文件夹(默认使用dstdir), 这种情况下, dstdir只用于比较
+  -k, --keepsame 如果目标文件已存在, 则保留源文件, 默认删除源文件
   -r, --depth 遍历子目录
   -c, --content_compare 逐字节对比src和dst下同名文件是否相同, 默认只要文件大小相同就认为相同
   -v, --verbose 打印详细日志
