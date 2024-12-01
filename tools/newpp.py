@@ -12,9 +12,13 @@ USAGE: newpp.py [options] <src> <dst>:
   -n, --dryrun 不实际执行拷贝和移动操作 
 """
 
+# pyinstaller -F --exclude numpy newpp.py
 # DEBUGME:
 #    --todir E:\w\newpp2 J:\DCIM\100CANON \\192.168.1.111\e\w\newpp
 #    --todir \\192.168.1.111\e\w\newpp.to J:\DCIM\100CANON \\192.168.1.111\e\w\newpp
+#    --todir \\192.168.1.111\e\w\newpp.to "J:\DCIM\100CANON" \\192.168.1.111\e\w\newpp
+#    -r --todir \\192.168.1.111\e\w\newpp.to "\\192.168.1.11\t1\lmm" \\192.168.1.111\e\w\newpp
+#    -r --todir L:\w\newpp.to "\\192.168.1.11\t2\pp" L:\w\newpp
 
 import os, sys, time, shutil
 import exifread as exif
@@ -253,7 +257,10 @@ class MainApp(TkYzwMainUiApp):
             return
 
         print("img_show", filepath_src)
-        img_show(filepath_src)
+        try:
+            img_show(filepath_src)
+        except:
+            traceback.print_exc()
 
     def on_ui_tree_menu(self, event):
         mainui = self.mainui
@@ -341,6 +348,7 @@ if __name__=="__main__":
     sta = CSTA()
     opt = opt_parse(sys.argv[1:])
     # opt.dryrun = 1
+    if not opt.todir:  opt.todir = opt.dstdir
 
     # main_newpp(opt.srcdir, opt.dstdir)
 
