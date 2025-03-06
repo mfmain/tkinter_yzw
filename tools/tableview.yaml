@@ -1,0 +1,137 @@
+
+# format: { ui: 'tk.Label(...)', cellkey: key, rowspan: 1, columnspan: 1, sticky: nesw, padx: 1, pady: 1}
+
+
+option:
+  title: '{time.strftime("%H:%M:%S")}'
+  interval: 1  # seconds
+  layout: tableview_layout.yaml
+
+
+style:
+  # 可选的style属性: https://tcl.tk/man/tcl8.6/TkCmd/label.htm
+  table: {bd: 3, relief: groove, bg: "#b0b0cc"}
+
+  heading: {font: "bold", fg: blue}
+  style: {font: "微软雅黑,9"}
+  style1: {font: "微软雅黑,10", fg: blue}
+  style2: {font: "微软雅黑,10", fg: blue}
+
+
+exec_init:
+  # 程序初始化时执行一次
+  - 底色 = "#DDEEFF"
+  - 前景色 = 'black'
+  - 前景色s = 'blue'
+  - 标题底色 = '#BBE1EE'
+  - 汇总底色 = 'white'
+  - add_style("labelka", relief="flat", bg=底色, fg=前景色, font="微软雅黑 10")
+  - add_style("labelkas", relief="flat", bg=底色, fg=前景色s, font="微软雅黑 10")
+  - add_style("labelkah", relief="flat", bg=标题底色, fg=前景色, font="微软雅黑 10 bold")
+  - add_style("labelkah2", relief="flat", bg=标题底色, fg=前景色, font="微软雅黑 7")
+  - add_style("labelka个", relief="flat", bg="#ffffff", fg=前景色, anchor="e", font="微软雅黑 10")
+  - add_style("labelka个s", relief="flat", bg="#ffffff", fg=前景色s, anchor="w", font="微软雅黑 10")
+  - add_style("labelka个粗", relief="flat", bg="#ffffff", fg=前景色, anchor="e", font="微软雅黑 10 bold")
+  - add_style("labelka个s粗", relief="flat", bg="#ffffff", fg=前景色s, anchor="w", font="微软雅黑 10 bold")
+  - add_style("labelka汇总", relief="flat", bg=汇总底色, fg=前景色, font="微软雅黑 11 bold")
+  - add_style("labelkah花", relief="flat", bg="#FFC7CE", fg=前景色, font="微软雅黑 10 bold")
+  - add_style("labelka花", relief="flat", bg="#FFE7EE", fg=前景色)
+  - add_style("labelkah白", relief="flat", bg="white",fg=前景色, font="微软雅黑 10 bold")
+
+  - rd170 = FrRedis("168.36.1.170:6379:0")
+
+
+exec_pre:
+  # 每次更新前执行
+  - bias = DictObj(rd170.hgetall("DAILY:app:risk_ctrl:bias"))
+  - biasjz = rd170.hgetall("DAILY:app:risk_ctrl:biasjz")
+
+
+  # - "monthop = app.rdconfig.get('ETC:monthop')"
+  - "now = time.strftime('%H:%M:%S')"
+
+
+exec_post:
+  - "uix = mainui.ui_table.get_cell('J1').uix; uix['bg'] = 'red' if 90 > 50 else 汇总底色"
+
+
+
+table:
+  style: table
+  rows:
+    # 下面一级定义每一行(row), 再下面一级定义每个单元格(cell), 单元格可以是单个控件{widget}或者多个控件[{wx1},{wx2},...]
+    # widget是用大括号括起来的一些描述, label型控件显示一个固定的文本, v型控件可以引用外部变量
+    # widget的属性: { v: '变量', cellkey: key, rowspan: 1, columnspan: 1, sticky: nesw, padx: 1, pady: 1}
+    #    cellkey: key 可以给cell起一个名字,在exec_post节中使用self.ui_table.get_cell(key).ui引用该控件
+    #    rowspan: 1, columnspan: 1  占用的行数和列数,缺省为1
+    #    控件在单元格中的位置(使用东南西北代表上下左右): nesw四面扩展 e朝东 w朝西 s朝南 n朝北 we横向扩展 sn上下扩展
+    #    padx: 1, pady: 1
+    -
+      - {ui: 'tk.Button(table, text="设置", command=mainui.on_setting, relief="raised", bg="#C0C0C0", fg=前景色, font="微软雅黑 10 bold")'}
+      - {label: '50现货(普通、RR、普通股票）', style: labelkah, cellkey: test, columnspan: 3}
+      - {label: '300现货(普通、RR）', style: labelkah, cellkey: test, columnspan: 2}
+      - {label: '50期权', style: labelkah花, columnspan: 2}
+
+
+    -
+      - {label: '头寸万', style: labelkah, rowspan: 2}
+      - {f: '{bias.IH02_B}', style: labelka, columnspan: 3}
+      - {f: '{float(biasjz["510330"]):.2f}',  style: labelka, columnspan: 2}
+      - {f: '', style: labelka花, columnspan: 2}
+
+
+    -
+      - {}
+      - [{f: '{bias.IH02_B}', style: labelka}, {f: '{float(biasjz["510330"]):.2f}', style: labelkas}]
+      - [{f: '{bias.IH01_B}', style: labelka}, {f: '{bias.IH01_B}', style: labelkas}]
+      - {f: '', style: labelka}
+      - [{f: '', style: labelka}, {f: '', style: labelkas}]
+      - [{f: '', style: labelka}, {f: '', style: labelkas}]
+      - {f: '', style: labelka花}
+      - {f: '', style: labelka花}
+
+    -
+      - {label: '头寸个', style: labelkah白, rowspan: 2}
+      - [{f: '', style: labelka个}, {f: '', style: labelka个s}]
+      - [{f: '', style: labelka个}, {f: '', style: labelka个s } ]
+      - {f: '', style: labelka个}
+      - [{f: '', style: labelka个}, {f: '', style: labelka个s}]
+      - [{f: '', style: labelka个}, {f: '', style: labelkah个s}]
+      - {f: '', style: labelka个}
+      - {f: '', style: labelka个}
+
+    -
+      - {}
+      - [{f: '', style: labelka个粗}, {f: '', style: labelka个s粗}, {f: '', style: labelka个粗}, {f: '', style: labelka个s粗, columnspan: 3}]
+      - [{f: '', style: labelka个粗}, {f: '', style: labelka个s粗}, {f: '', style: labelka个粗}, {f: '', style: labelka个s粗, columnspan: 2}]
+      - { f: '', style: labelka个 , columnspan: 2}
+
+
+    -
+      - {label: '余额万', style: labelkah}
+      - {f: '', y.J11)', style: labelka, cellkey: J1}
+      - {f: '', y.J22)', style: labelka, cellkey: J2}
+      - {f: '', style: labelka, cellkey: J3}
+      - {label: '919现：', style: labelkah, columnspan: 1}
+      - [{f: '', style: labelka}, {f: '', style: labelkas}, {f: '', style: labelka}, {f: '', style: labelkas}]
+      - {f: '', style: labelka花, cellkey: J5, columnspan: 2}
+
+    -
+      - {label: '余额个', style: labelkah白}
+      - {f: '', float(y.K11))', style: labelka个}
+      - {f: '', style: labelka个}
+      - {f: '', style: labelka个}
+      - {f: '', style: labelka个}
+      - {f: '', style: labelka个}
+      - {f: '', style: labelka个, columnspan: 2}
+
+    -
+      - {label: '持仓比', style: labelkah}
+      - {f: '', style: labelka}
+      - {f: '', style: labelka}
+      - {f: '', style: labelka}
+      - {label: '330现：', style: labelkah, columnspan: 1}
+      - [{f: '', style: labelka}, {f: '', style: labelkas}, {f: '', style: labelka}, {f: '', style: labelkas}]
+      - {f: '', style: labelka花}
+      - {f: '', style: labelka花}
+
