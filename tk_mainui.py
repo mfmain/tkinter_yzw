@@ -233,10 +233,11 @@ class TkYzwMainUiApp:
         else:
             a_timercycle = []
 
+        timeout = enable_idle if enable_idle else 1
         while not self.mainui.root_destroyed:
             btimeout = False
             try:
-                msgtype, *argv = mainq.get(block=True, timeout=enable_idle)
+                msgtype, *argv = mainq.get(block=True, timeout=timeout)
             except queue.Empty:
                 btimeout = True
             except:

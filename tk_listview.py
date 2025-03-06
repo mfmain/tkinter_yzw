@@ -8,7 +8,10 @@ from collections import OrderedDict
 class TkYzwFrameListview(tk.Frame):
     def __init__(self, master, column_list, on_cell=None, on_select=None, on_heading=None, scroll="", maxrows:int=0, movetop_on_update=False, **ak):
         """
-        :param column_list: [("tag", 120), ("desc,w", "100,w+"), ...("列名,列名anchor", "列宽,内容行anchor")] 不包含树节点"#0"
+        :param column_list: [("tag",120), ("desc,w","100,w+"), ...("列名,列名anchor","列宽,内容行anchor", keyfunc)] 不包含树节点"#0"
+                        ("来源", 100, int),                            width=100, 用int函数做keyfunc来对该列排序
+                        ("分类,e","50:100,w", lambda x: int(x[1:])),   width=50到100, 抬头右对齐e,内容左对齐w, 用lambda做keyfunc来对该列排序
+                        ("信息,w", "100,w+")                           width=100可扩展, 抬头右对齐e,内容左对齐w
         :param on_cell: 双击某个单元格时调用，同时on_select也会被调用
         :param on_select: 选择时调用(单击某行单选, 按shift片选, 按ctrl多选)
         :param on_heading： 单击抬头时调用

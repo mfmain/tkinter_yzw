@@ -118,7 +118,9 @@ def move_photo_fd(srcdir, filename, dstpdir, t, tn):
     print("\tmove %s %s %s" % (filename, dstdir, tn), end=" ")
     if is_same(filename, filenamed):
         print("same")
-        if not opt.dryrun and not opt.keepsame: os.remove(filename)
+        if not opt.dryrun and not opt.keepsame:
+            # print(f"remove {filename}")
+            os.remove(filename)
         if not opt.keepsame: sta.removed += 1
         return
 
@@ -132,7 +134,7 @@ def move_photo_fd(srcdir, filename, dstpdir, t, tn):
             print("")
         except:
             sta.failed += 1
-            print("failed")
+            print(f"move {filename} {dstdir} failed")
     else:
         sta.moved += 1
         print("")
@@ -154,6 +156,9 @@ class PhotoItem:
             tn = '文件时间戳'
             t = t_filetime(filepath)
 
+        if opt.verbose:
+            print(f"{filename}: {tn}")
+
         self.srcdir = root            # 源目录
         self.filename = filename      # 文件名，不带目录
         self.filepath_src = filepath  # 源文件名，全路径
@@ -168,7 +173,7 @@ class PhotoItem:
 def iter_srcdir(srcdir):
     """generator, 遍历源图片"""
     for root, dirs, files in os.walk(srcdir, True):
-        print ("目录" + root)
+        print("目录" + root)
         for filename in files:
             sta.total += 1
             e = filename[-4:].lower() # _, e = os.path.splitext(filename)
@@ -176,7 +181,7 @@ def iter_srcdir(srcdir):
                 # print(f"\t{root} {filename} ignored")
                 sta.ignored += 1
                 continue
-            #move_photo_fd(filepath, filename, t, tn)
+            # move_photo_fd(filepath, filename, t, tn)  # 不再自动执行, 改由界面驱动
             yield PhotoItem(root, filename)
         if not opt.depth: break # 不遍历子目录
 
@@ -269,8 +274,8 @@ class MainApp(TkYzwMainUiApp):
         # print(a_iid)
         if not a_iid: return
         menubar = tk.Menu(self.mainui.ui_tree)
-        menubar.add_command(label="copy to", command=lambda : mainui.on_callback("tree_copy_to", a_iid))
-        menubar.add_command(label="move to", command=lambda: mainui.on_callback("tree_move_to", a_iid))
+        menubar.add_command(label=f"copy to {opt.todir}", command=lambda : mainui.on_callback("tree_copy_to", a_iid))
+        menubar.add_command(label=f"move to {opt.todir}", command=lambda: mainui.on_callback("tree_move_to", a_iid))
         menubar.add_command(label="delete", command=lambda: mainui.on_callback("tree_delete", a_iid))
         menubar.add_command(label="explorer", command=lambda: mainui.on_callback("tree_explorer", a_iid[0]))
         menubar.post(event.x_root, event.y_root)
@@ -315,7 +320,8 @@ class MainApp(TkYzwMainUiApp):
         print("on_ui_tree_move_to", a_iid)
         # self.do_fastcopy("move", a_iid)
         for iid in a_iid:
-            pi = self.d_iid_pi[iid]
+            pi = self.d_iid_pi.get(iid)
+            if not pi: continue  # "图片时间", ...
             print(f"move {pi.filepath_src} {pi.todir}")
             if not os.path.exists(pi.todir): os.mkdir(pi.todir)
             try:
@@ -347,6 +353,7 @@ class MainApp(TkYzwMainUiApp):
 if __name__=="__main__":
     sta = CSTA()
     opt = opt_parse(sys.argv[1:])
+    print(f"dryrun={opt.dryrun} keepsame={opt.keepsame}")
     # opt.dryrun = 1
     if not opt.todir:  opt.todir = opt.dstdir
 
