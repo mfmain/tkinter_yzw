@@ -299,6 +299,7 @@ class _DebugmeSplitLines:
 def _getopt():
     argv = sys.argv[1:]
     parser = argparse.ArgumentParser(description='ulogview')
+    parser.add_argument('av', type=str, default="", nargs='*', help='redis host for config')
     parser.add_argument('-f', '--file', type=str, default="", help='load from logfile')
     parser.add_argument('-u', '--udp', type=int, default=17878, help='listen on udp port')
     parser.add_argument('-l', '--log', type=str, default="", help='write to logfile')
@@ -318,7 +319,11 @@ if sysarg.log:
 else:
     log = None
 
-if sysarg.file:
+if len(sysarg.av) > 0:
+    ThreadInputFile(g.q, fn=sysarg.av[0], encoding=sysarg.source_encoding).start()
+    mainui = MainUi(title=sysarg.av[0])
+
+elif sysarg.file:
     # D:\tx\src\frpy\py\robot_rmf_7808.log
     # ulogview_sample.log
     ThreadInputFile(g.q, fn=sysarg.file, encoding=sysarg.source_encoding).start()
