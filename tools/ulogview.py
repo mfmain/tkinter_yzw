@@ -1,7 +1,7 @@
 # coding: gbk
 
-# py3xcli & pyinstaller -F -w --exclude numpy ulogview.py & copy dist\ulogview.exe d:\s\bin /y
-# py3xcli & pyinstaller -F --exclude numpy ulogview.py & copy dist\ulogview.exe d:\s\bin\ulogview_cons.exe /y
+# py3xcli & C:\Python313\Scripts\pyinstaller -F -w --exclude numpy ulogview.py & copy dist\ulogview.exe d:\s\bin /y
+# py3xcli & C:\Python313\Scripts\pyinstaller -F    --exclude numpy ulogview.py & copy dist\ulogview.exe d:\s\bin\ulogview_cons.exe /y
 # DEBUG_ARG: -f ulogview_sample.log -l d:\^\ulogview.log
 #            -f D:\tx\src\frpy\py\robot_rmf_7808.log
 #            -u 17878 缺省
@@ -28,6 +28,21 @@ from tkinter.messagebox import showinfo
 # windows下也可能通过sshfs读取linux文件, 我糊涂了, 所以不要区分CRLF为妙
 CRLF = b'\n'
 CRLFLEN = 1
+
+
+def det_file_encoding(fn:str, encoding="gbk", linecnt=5):
+    with (open(fn, "rb") as f):
+        for i in range(linecnt):
+            try:
+                s = f.readline()
+                if not s: return encoding
+                s = s.decode(encoding)
+            except:
+                if encoding == 'gbk':
+                    return 'utf8'
+                else:
+                    return 'gbk'
+    return encoding
 
 
 class MyGlobals():
@@ -64,7 +79,7 @@ class ThreadInputFile(threading.Thread):
         self.daemon = True
         self.q = q
         self.fn = fn
-        self.encoding = encoding
+        self.encoding = det_file_encoding(fn, encoding=encoding)
         self.polltv = polltv
         self.split_lines_buf = b""
 

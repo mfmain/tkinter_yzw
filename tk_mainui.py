@@ -9,7 +9,6 @@
 
 import os
 import time
-import chardet
 import queue
 import traceback
 import yaml
@@ -24,8 +23,13 @@ def _yaml_load(fn, encoding=None, default=None):
     if os.path.exists(fn):
         bcontent = open(fn, "rb").read()
         if encoding is None:
-            encoding = chardet.detect(bcontent)['encoding']
-        yml = yaml.load(bcontent.decode(encoding), Loader=yaml.FullLoader)  # throw exception
+            try:
+                content = bcontent.decode("utf8")
+            except:
+                content = bcontent.decode("gbk")
+        else:
+            content = bcontent.decode(encoding)
+        yml = yaml.full_load(content)  # throw exception
         return default if yml is None else yml
     else:
         return default
