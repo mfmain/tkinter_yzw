@@ -1,4 +1,4 @@
-# coding： gbk
+# coding: utf-8
 
 USAGE = """
 USAGE: newpp.py [options] <srcdir> <dstdir>:
@@ -28,6 +28,7 @@ import traceback
 from collections import defaultdict
 import tkinter as tk
 from tkinter.filedialog import askdirectory
+from tkinter.messagebox import askyesno
 from tkinter_yzw.tk_tree import TkYzwFrameTree
 from tkinter_yzw.tk_mainui import TkYzwMainUi, TkYzwMainUiApp
 import win32api
@@ -208,9 +209,9 @@ def is_same(fn1, fn2):
     try: st2 = os.stat(fn2)
     except: return False
     # print(st1.st_ino, st2.st_ino)
-    if st1.st_ino == st2.st_ino:
-        print(" idential file, abort!")
-        exit(1)
+    if st1.st_ino == st2.st_ino and st1.st_dev == st2.st_dev:
+        print(" identical file, treat as same")
+        return True
     if opt.content_compare: return fc(fn1, fn2)
     if st1.st_size == st2.st_size: return True
     return False
@@ -335,10 +336,20 @@ class MainApp(TkYzwMainUiApp):
     def on_ui_tree_delete(self, a_iid):
         print("on_ui_tree_delete", a_iid)
         # self.do_fastcopy("delete", a_iid)
-        for iid in a_iid:
-            pi = self.d_iid_pi[iid]
+        a_pi = [(iid, self.d_iid_pi[iid]) for iid in a_iid if iid in self.d_iid_pi]
+        if not a_pi: return
+        if opt.dryrun:
+            print(f"dryrun: skip delete {len(a_pi)} file(s)")
+            return
+        if not askyesno("Delete confirm", "Delete " + str(len(a_pi)) + " source file(s)? This cannot be undone!"):
+            return
+        for iid, pi in a_pi:
             print(f"del {pi.filepath_src}")
-            os.unlink(pi.filepath_src)
+            try:
+                os.unlink(pi.filepath_src)
+            except OSError as e:
+                print(e)
+                continue
             mainui.ui_tree.delete(iid)
 
     def on_ui_tree_explorer(self, iid):

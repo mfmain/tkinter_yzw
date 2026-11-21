@@ -97,7 +97,7 @@ def enable_autoscroll(cls, master_, scroll="xy", *a, **ka):
     obj.place = master.place
     obj.pack_forget = master.pack_forget
     obj.grid_forget = master.grid_forget
-    obj.place_forget = master.place_forget()
+    obj.place_forget = master.place_forget
     return obj
 
 

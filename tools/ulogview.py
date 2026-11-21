@@ -317,6 +317,7 @@ def _getopt():
     parser.add_argument('av', type=str, default="", nargs='*', help='redis host for config')
     parser.add_argument('-f', '--file', type=str, default="", help='load from logfile')
     parser.add_argument('-u', '--udp', type=int, default=17878, help='listen on udp port')
+    parser.add_argument('-H', '--host', type=str, default="127.0.0.1", help='udp listen host, 0.0.0.0 for all interfaces')
     parser.add_argument('-l', '--log', type=str, default="", help='write to logfile')
     parser.add_argument("-n", "--with_lineno", action="store_true", default=False, help="parse lineno")
     parser.add_argument('--source_encoding', type=str, default="gbk", help='source(file/udp) encoding')
@@ -345,7 +346,7 @@ elif sysarg.file:
     mainui = MainUi(title=sysarg.file)
 
 else:
-    ThreadInputUdp(g.q, host="0.0.0.0", port=sysarg.udp, encoding=sysarg.source_encoding).start()
+    ThreadInputUdp(g.q, host=sysarg.host, port=sysarg.udp, encoding=sysarg.source_encoding).start()
     mainui = MainUi(title=sysarg.udp)
 
 

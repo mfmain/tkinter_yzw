@@ -371,8 +371,8 @@ def load_textfile(fn:str, encodings=None):
     if encodings is None: encodings = ['gbk', 'utf8']
     for encoding in encodings:
         try:
-            f = open(sys.argv[1], encoding=encoding)
-            return f.read()
+            with open(fn, encoding=encoding) as f:
+                return f.read()
         except:
             continue
 

@@ -2,6 +2,7 @@
 
 import sys
 import time
+import ast
 import tkinter as tk
 import tkinter.ttk as ttk
 #import bisect
@@ -31,6 +32,7 @@ def list_get(a:list, i:int, default:any):
 
 
 class TkYzwFrameTree(tk.Frame):
+    treecmd_allow_exec = False  # backtick treecmd runs exec(); keep False when treecmd may come from network (e.g. udp logs)
     def __init__(self, master, column_list, width_list:list=None, command=None, on_select=None, heading_command=None, scroll="", dnd="", **kw):
         """
         推荐格式: column_list = [("tag", 120), ("desc,w", "100,w+"), ...("抬头列名,抬头列anchor", "列宽,内容行anchor")] 分别对应column=['#0', 'c1', 'c2', ...]  #0是树节点
@@ -245,8 +247,10 @@ class TkYzwFrameTree(tk.Frame):
     #         print("iter_children for", x)
     #         self.iter_children(x)
 
-    def iter_children(self, iid="", a=[]):
+    def iter_children(self, iid="", a=None):
         """ 返回iid下的所有子节点，如果iid为空，则返回所有节点 """
+        if a is None:
+            a = []
         try:
             children = self.wx.get_children(iid)
         except:
@@ -487,6 +491,7 @@ class TkYzwFrameTree(tk.Frame):
         # 高级命令:
         # `<exec_source_code>  # 直接调用self.<exec_source_code>
         # `easy_inert(path, _iid, index=0...)
+        # Note: backtick cmd uses exec(), DISABLED by default; set tree.treecmd_allow_exec = True to enable
 
         if not cmd: return True
         if rootpath:
@@ -512,8 +517,8 @@ class TkYzwFrameTree(tk.Frame):
             # fold
             a = cmda.split(maxsplit=1)  # iid, bopen
             try:
-                bopen = eval(a[1])
-            except:
+                bopen = ast.literal_eval(a[1])
+            except Exception:
                 bopen = True
             self.easy_item(rootpath_ + a[0], open=bopen)
 
@@ -557,8 +562,11 @@ class TkYzwFrameTree(tk.Frame):
             else:
                 self.do_deltree(rootpath_ + cmda, keepself=keepself)
         elif action == '`':
+            if not self.treecmd_allow_exec:
+                print("treecmd exec disabled, set treecmd_allow_exec=True to enable:", cmda)
+                return True
             try:
-                exec("self." + cmda)
+                exec("self." + cmda, {"self": self})
             except:
                 pass
         else:
