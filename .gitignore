@@ -1,0 +1,12 @@
+__pycache__/
+build/
+.idea/
+*.pyc
+*.log
+*.exe
+*.obj
+*.spec
+*.xlsx
+*.csv
+*_layout*.yaml
+.vscode/
