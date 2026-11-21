@@ -348,6 +348,7 @@ elif sysarg.file:
 else:
     ThreadInputUdp(g.q, host=sysarg.host, port=sysarg.udp, encoding=sysarg.source_encoding).start()
     mainui = MainUi(title=sysarg.udp)
+    mainui.ui_tree.treecmd_allow_exec = False  # udp input is untrusted: never exec() backtick cmds
 
 
 mainui.root.mainloop()

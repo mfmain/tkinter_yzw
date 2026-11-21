@@ -32,7 +32,7 @@ def list_get(a:list, i:int, default:any):
 
 
 class TkYzwFrameTree(tk.Frame):
-    treecmd_allow_exec = False  # backtick treecmd runs exec(); keep False when treecmd may come from network (e.g. udp logs)
+    treecmd_allow_exec = True  # backtick treecmd runs exec(); MUST be set False when treecmd comes from network (ulogview does it in udp mode)
     def __init__(self, master, column_list, width_list:list=None, command=None, on_select=None, heading_command=None, scroll="", dnd="", **kw):
         """
         推荐格式: column_list = [("tag", 120), ("desc,w", "100,w+"), ...("抬头列名,抬头列anchor", "列宽,内容行anchor")] 分别对应column=['#0', 'c1', 'c2', ...]  #0是树节点
@@ -491,7 +491,7 @@ class TkYzwFrameTree(tk.Frame):
         # 高级命令:
         # `<exec_source_code>  # 直接调用self.<exec_source_code>
         # `easy_inert(path, _iid, index=0...)
-        # Note: backtick cmd uses exec(), DISABLED by default; set tree.treecmd_allow_exec = True to enable
+        # Note: backtick cmd uses exec(); set tree.treecmd_allow_exec = False to reject untrusted input (ulogview does it in udp mode)
 
         if not cmd: return True
         if rootpath:
