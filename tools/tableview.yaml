@@ -1,5 +1,5 @@
 
-# format: { ui: 'tk.Label(...)', cellkey: key, rowspan: 1, columnspan: 1, sticky: nesw, padx: 1, pady: 1}
+# format: { uix: 'tk.Label(...)', cellkey: key, rowspan: 1, columnspan: 1, sticky: nesw, padx: 1, pady: 1}
 
 
 option:
@@ -40,15 +40,11 @@ exec_init:
 
   - rd170 = FrRedis("168.36.1.170:6379:0")
 
-
 exec_pre:
   # 每次更新前执行
   - bias = DictObj(rd170.hgetall("DAILY:app:risk_ctrl:bias"))
   - biasjz = rd170.hgetall("DAILY:app:risk_ctrl:biasjz")
-
-
-  # - "monthop = app.rdconfig.get('ETC:monthop')"
-  - "now = time.strftime('%H:%M:%S')"
+  - y = DictObj({'J11':11, 'J22':22, 'K11':'K11'})
 
 
 exec_post:
@@ -67,7 +63,7 @@ table:
     #    控件在单元格中的位置(使用东南西北代表上下左右): nesw四面扩展 e朝东 w朝西 s朝南 n朝北 we横向扩展 sn上下扩展
     #    padx: 1, pady: 1
     -
-      - {ui: 'tk.Button(table, text="设置", command=mainui.on_setting, relief="raised", bg="#C0C0C0", fg=前景色, font="微软雅黑 10 bold")'}
+      - {uix: 'tk.Button(table, text="设置", command=mainui.on_setting, relief="raised", bg="#C0C0C0", fg=前景色, font="微软雅黑 10 bold")'}
       - {label: '50现货(普通、RR、普通股票）', style: labelkah, cellkey: test, columnspan: 3}
       - {label: '300现货(普通、RR）', style: labelkah, cellkey: test, columnspan: 2}
       - {label: '50期权', style: labelkah花, columnspan: 2}
@@ -109,8 +105,8 @@ table:
 
     -
       - {label: '余额万', style: labelkah}
-      - {f: '', y.J11)', style: labelka, cellkey: J1}
-      - {f: '', y.J22)', style: labelka, cellkey: J2}
+      - {f: '{y.J11}', style: labelka, cellkey: J1}
+      - {f: '{y.J22}', style: labelka, cellkey: J2}
       - {f: '', style: labelka, cellkey: J3}
       - {label: '919现：', style: labelkah, columnspan: 1}
       - [{f: '', style: labelka}, {f: '', style: labelkas}, {f: '', style: labelka}, {f: '', style: labelkas}]
@@ -118,7 +114,7 @@ table:
 
     -
       - {label: '余额个', style: labelkah白}
-      - {f: '', float(y.K11))', style: labelka个}
+      - {f: '{y.K11}', style: labelka个}
       - {f: '', style: labelka个}
       - {f: '', style: labelka个}
       - {f: '', style: labelka个}

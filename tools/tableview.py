@@ -90,7 +90,6 @@ class MainUi(tky.TkYzwMainUi):
 
         self.on_COPY_signal = False
         self.root.bind("<Control-c>", self.on_COPY)
-        # self.on_timer()
 
     def on_COPY(self, e):
         self.on_COPY_signal = True
@@ -98,7 +97,7 @@ class MainUi(tky.TkYzwMainUi):
     def layout_wx(self, table, cell):
         # d_locals['self'] = self
         # d_locals['table'] = table
-        d_locals['cell'] = cell
+        d_locals['cell'] = cell  # cell> {'f': '{bias.IH02_B}', 'style': 'labelka', 'columnspan': 3}
 
         x = cell.get('uiv', None)
         if x is not None:
@@ -110,42 +109,42 @@ class MainUi(tky.TkYzwMainUi):
         if "f" in cell:
             if "style" in cell:
                 style = cell['style']
-                ui = tk.Label(table, **d_style.get(style, {}))
-                self.a_ui_f.append((ui, 'f' + repr(cell['f']), {}))
+                uix = tk.Label(table, **d_style.get(style, {}))
+                self.a_ui_f.append((uix, 'f' + repr(cell['f']), {}))
                 del cell['style']
             else:
-                ui = tk.Label(table)
-                self.a_ui_f.append((ui, 'f' + repr(cell['f']), {}))
+                uix = tk.Label(table)
+                self.a_ui_f.append((uix, 'f' + repr(cell['f']), {}))
             del cell['f']
         elif "v" in cell:
             if "style" in cell:
                 style = cell['style']
-                ui = tk.Label(table, **d_style.get(style, {}))
-                self.a_ui_v.append((ui, cell['v'], {}))
+                uix = tk.Label(table, **d_style.get(style, {}))
+                self.a_ui_v.append((uix, cell['v'], {}))
                 del cell['style']
             else:
-                ui = tk.Label(table)
-                self.a_ui_v.append((ui, cell['v'], {}))
+                uix = tk.Label(table)
+                self.a_ui_v.append((uix, cell['v'], {}))
             del cell['v']
 
         elif 'label' in cell:
             if "style" in cell:
                 style = cell['style']
-                ui = tk.Label(table, text=cell['label'], **d_style.get(style, {}))
+                uix = tk.Label(table, text=cell['label'], **d_style.get(style, {}))
                 del cell['style']
             else:
-                ui = tk.Label(table, text=cell['label'])
+                uix = tk.Label(table, text=cell['label'])
             del cell['label']
-        elif 'ui' in cell:
+        elif 'uix' in cell:
             try:
-                ui = eval(cell['ui'], globals(), d_locals)
-                del cell['ui']
+                uix = eval(cell['uix'], globals(), d_locals)
+                del cell['uix']
             except:
                 traceback.print_exc()
         else:
-            ui = None
+            uix = None
 
-        return ui, uiv
+        return uix, uiv
 
     def load_table_from_yaml(self, root):
         tb = yaml_table
@@ -183,6 +182,7 @@ class MainUi(tky.TkYzwMainUi):
 
     def on_timer(self):
         self.root.title(eval(self.ui_title))
+        a_copy = []
 
         for code in yaml_exec_pre:
             try:
@@ -196,12 +196,14 @@ class MainUi(tky.TkYzwMainUi):
             except:
                 print("eval failed: %s" % f)
                 ui['text'] = f
+            a_copy.append(ui['text'])
         for ui, v, vo in self.a_ui_v:
             try:
                 ui['text'] = eval(v, globals(), d_locals)
             except:
                 # print("eval failed: %s" % v)
                 ui['text'] = v
+            a_copy.append(ui['text'])
         for code in yaml_exec_post:
             try:
                 exec(code, globals(), d_locals)
@@ -209,110 +211,9 @@ class MainUi(tky.TkYzwMainUi):
                 print("exec failed: %s" % code)
                 traceback.print_exc()
         if self.on_COPY_signal:
-            msgy = pprint.pformat(y.__dict__)
-            msgz = pprint.pformat(z.__dict__)
-            if 'dy2' in locals():
-                msgdy2 = pprint.pformat(locals()["dy2"])
-            else:
-                msgdy2 = ""
-            if 'dz2' in locals():
-                msgdz2 = pprint.pformat(locals()["dz2"])
-            else:
-                msgdz2 = ""
-            clip_copy("y=%s\n\nz=%s\n\ndy2=%s\n\ndz2=%s\n\n" % (msgy, msgz, msgdy2, msgdz2))
+            msgy = pprint.pformat(d_locals)
+            clip_copy(",".join(a_copy))
             self.on_COPY_signal = False
-
-        # try:
-        #     withdrawable = float(app.p.tdrf.conn.hget("TD:a", 'WithdrawQuota'))/10000
-        # except:
-        #     withdrawable = 0
-        # self.root.title("%s  可取f=%.1f万" % (app.title_static, withdrawable))
-        # self.root.after(1000, self.on_timer)
-
-#
-# class MainApp(FyApp):
-#     def __init__(self, opt_: FyOpt, *la, **ak):
-#         super().__init__(opt_, *la, **ak)
-#         self.yaml = d = yaml_load("risk_ctrl_3.yaml")
-#         self.yaml_table = d['table']
-#         self.yaml_exec_init = d.get('exec_init', [])
-#         self.yaml_exec_pre = d.get('exec_pre', [])
-#         self.yaml_exec_post = d.get('exec_post', [])
-#         self.yaml_style = d.get("style", dict())
-#
-#         self.frpd = FrProduct()
-#         self.frconfig = self.frpd.frconfig
-#         self.rdconfig = self.frconfig.rdconfig
-#         self.dmdi = dmdi = self.frconfig.dmdi_get()
-#
-#         self.rdkey_y = self.frpd.rdkey_daily_ + "app:risk_ctrl:result"
-#         self.rdkey_z = "P:%s:ETC:app:risk2:result" % self.frpd.product_name
-#         self.rdkey_input_y = self.frpd.rdkey_product_ + "ETC:app:risk_ctrl:input"
-#         self.rdkey_input_z = "P:%s:ETC:app:risk_ctrl_2:input" % self.frpd.product_name
-#         self.rdkey_c = "P:%s:DAILY:app:risk_ctrl:checker"%self.frpd.product_name
-#         self.rdkey_fx = "P:%s:DAILY:app:risk_ctrl:pubx"%self.frpd.product_name
-#
-#         today = date.today()
-#         yymm0, yymm1, *_ = dmdi.oplst_a_yymm("510050")
-#         期权交割日 = date_from_str(dmdi.d_opkind_d_yymm_exdate['510050'][yymm0])
-#         期权交割日_下月 = date_from_str(dmdi.d_opkind_d_yymm_exdate['510050'][yymm1])
-#         期货交割日 = date_from_str(dmdi.d_lxcode_exdate['IH01'])
-#         期货交割日_下月 = date_from_str(dmdi.d_lxcode_exdate['IH02'])
-#
-#         days_f =(期货交割日 - today).days
-#         days_fn =(期货交割日_下月 - today).days
-#         days_op =(期权交割日 - today).days
-#         days_opn =(期权交割日_下月 - today).days
-#         self.交割日信息 = "交割日:f=%d；%d op=%d；%d" % (days_f, days_fn, days_op, days_opn)
-#
-#         rd115 = FrRedis("168.36.1.115")
-#         prc50 = int(rd115.get("KZ:I000016:PRECLOSE"))  # 24115621
-#         系数 = prc50 * 30 * 0.066 / 365 / 300 / 1000
-#         cost_IH = days_f * 系数
-#         cost_IHnext = days_fn * 系数
-#         cost_op = days_op * 系数
-#         cost_opn = days_opn * 系数
-#
-#         prc300 = int(rd115.get("KZ:I000300:PRECLOSE"))  # 39023853
-#         系数 = prc300 * 30 * 0.066 / 365 / 300 / 1000
-#         cost_IF = days_f * 系数
-#         cost_IFnext = days_fn * 系数
-#
-#         self.成本信息 = "    成本:IH=%.1f；%.1f    OPH=%.1f；%.1f    IF=%.1f；%.1f" % (cost_IH, cost_IHnext, cost_op, cost_opn, cost_IF, cost_IFnext)
-#
-#     def app_on_timer(self):
-#         global dy, dz, dc, dfx
-#         # g.Pe50 = int(self.rd115.get("KZ:S510050:LATEST"))
-#         # g.pe50 = g.Pe50 / 10000
-#         # g.Pe300 = int(self.rd115.get("KZ:S510300:LATEST"))
-#         # g.pe300 = g.Pe300 / 10000
-#         # g.Pe919 = int(self.rd115.get("KZ:S159919:LATEST"))
-#         # g.pe919 = g.Pe919 / 10000
-#         try:
-#             dy = eval(self.rdconfig.get(self.rdkey_y))
-#         except:
-#             dy = {}
-#         try:
-#             dz = eval(self.rdconfig.get(self.rdkey_z))
-#         except:
-#             dz = {}
-#         try:
-#             dc = eval(self.rdconfig.get(self.rdkey_c))
-#         except:
-#             dc = {}
-#         try:
-#             dfx = self.rdconfig.hgetall(self.rdkey_fx)
-#         except:
-#             dfx = {}
-#
-#         y.__dict__ = dy
-#         z.__dict__ = dz
-#         c.__dict__ = dc
-#         fx.__dict__ = dfx
-
-
-
-
 
 
 class MainApp(tky.TkYzwMainUiApp):
