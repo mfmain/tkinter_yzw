@@ -3,6 +3,7 @@
 import sys
 import time
 import ast
+import traceback
 import tkinter as tk
 import tkinter.ttk as ttk
 #import bisect
@@ -566,9 +567,12 @@ class TkYzwFrameTree(tk.Frame):
                 print("treecmd exec disabled, set treecmd_allow_exec=True to enable:", cmda)
                 return True
             try:
-                exec("self." + cmda, {"self": self})
-            except:
-                pass
+                # bare exec on purpose: cmds run in THIS frame and may use rootpath/rootpath_,
+                # e.g. ulogview_sample.log: `easy_item(rootpath_+"Usage", tags=["h1","blue"])
+                exec("self." + cmda)
+            except Exception:
+                print("treecmd exec failed:", cmda)
+                traceback.print_exc()
         else:
             return False  # fail to parse cmd
 
