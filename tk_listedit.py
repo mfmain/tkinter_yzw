@@ -6,6 +6,9 @@
 
 
 import tkinter as tk
+import os, sys
+# ensure the workspace package (not a site-packages copy) is used when running this file directly
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tkinter_yzw.tk_dialog import TkYzwDialog
 
 
@@ -125,9 +128,6 @@ if __name__ == '__main__':
         def on_ok(self):
             a = self.uix_le.on_layout_save()
             print(a)
-
-    import os, sys
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
     ui = Ui()
     ui.root.mainloop()

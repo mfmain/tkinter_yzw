@@ -15,6 +15,8 @@ import socket
 import threading
 import argparse
 import tkinter as tk
+# ensure the workspace package (not a site-packages copy) is used when running this file directly
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 import tkinter_yzw as tky
 from tkinter_yzw.tk_table import *
 
@@ -213,8 +215,7 @@ class MainUi(tky.TkYzwMainUi):
                 print("exec failed: %s" % code)
                 traceback.print_exc()
         if self.on_COPY_signal:
-            msgy = pprint.pformat(d_locals)
-            clip_copy(",".join(a_copy))
+            clip_copy(",".join(str(t) for t in a_copy))
             self.on_COPY_signal = False
 
 
@@ -287,9 +288,6 @@ def add_style(name, **d):
 
 
 if __name__ == '__main__':
-
-    import os, sys
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
     yaml_all = yaml.load(load_textfile(sys.argv[1]), Loader=yaml.FullLoader)
 
