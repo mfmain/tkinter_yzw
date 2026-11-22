@@ -29,12 +29,12 @@ class TkYzwDialog(tk.Toplevel):
         self.destroy()
 
     def on_ok(self):
-        self.destroy()
         self.result = self.collect_uiv()
+        self.destroy()
 
     def on_cancel(self):
-        self.destroy()
         self.result = None
+        self.destroy()
 
     def collect_uiv(self):
         d = dict()
@@ -112,4 +112,7 @@ if __name__ == '__main__':
         print(result)
 
 
+    import os, sys
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    main_连续三个modal()
     main_listview()
