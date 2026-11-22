@@ -38,7 +38,7 @@ exec_init:
   - add_style("labelka花", relief="flat", bg="#FFE7EE", fg=前景色)
   - add_style("labelkah白", relief="flat", bg="white",fg=前景色, font="微软雅黑 10 bold")
 
-  - rd170 = FrRedis("168.36.1.170:6379:0")
+  - rd170 = redis.Redis("168.36.1.170", encoding="gbk", encoding_errors='replace', decode_responses=True)
 
 exec_pre:
   # 每次更新前执行

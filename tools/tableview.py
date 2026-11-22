@@ -60,8 +60,8 @@ class MainUi(tky.TkYzwMainUi):
         # w.pack(side="left", fill="both", expand=1)
         # w.bind("<Double-1>", lambda event: self.on_callback("label_double1", event))
 
-        self.a_ui_f = []
-        self.a_ui_v = []
+        self.a_uix_f = []
+        self.a_uix_v = []
 
         for code in yaml_exec_init:
             if not code: continue
@@ -94,7 +94,7 @@ class MainUi(tky.TkYzwMainUi):
     def on_COPY(self, e):
         self.on_COPY_signal = True
 
-    def layout_wx(self, table, cell):
+    def layout_wx(self, master, cell:dict):
         # d_locals['self'] = self
         # d_locals['table'] = table
         d_locals['cell'] = cell  # cell> {'f': '{bias.IH02_B}', 'style': 'labelka', 'columnspan': 3}
@@ -109,31 +109,31 @@ class MainUi(tky.TkYzwMainUi):
         if "f" in cell:
             if "style" in cell:
                 style = cell['style']
-                uix = tk.Label(table, **d_style.get(style, {}))
-                self.a_ui_f.append((uix, 'f' + repr(cell['f']), {}))
+                uix = tk.Label(master, **d_style.get(style, {}))
+                self.a_uix_f.append((uix, 'f' + repr(cell['f']), {}))
                 del cell['style']
             else:
-                uix = tk.Label(table)
-                self.a_ui_f.append((uix, 'f' + repr(cell['f']), {}))
+                uix = tk.Label(master)
+                self.a_uix_f.append((uix, 'f' + repr(cell['f']), {}))
             del cell['f']
         elif "v" in cell:
             if "style" in cell:
                 style = cell['style']
-                uix = tk.Label(table, **d_style.get(style, {}))
-                self.a_ui_v.append((uix, cell['v'], {}))
+                uix = tk.Label(master, **d_style.get(style, {}))
+                self.a_uix_v.append((uix, cell['v'], {}))
                 del cell['style']
             else:
-                uix = tk.Label(table)
-                self.a_ui_v.append((uix, cell['v'], {}))
+                uix = tk.Label(master)
+                self.a_uix_v.append((uix, cell['v'], {}))
             del cell['v']
 
         elif 'label' in cell:
             if "style" in cell:
                 style = cell['style']
-                uix = tk.Label(table, text=cell['label'], **d_style.get(style, {}))
+                uix = tk.Label(master, text=cell['label'], **d_style.get(style, {}))
                 del cell['style']
             else:
-                uix = tk.Label(table, text=cell['label'])
+                uix = tk.Label(master, text=cell['label'])
             del cell['label']
         elif 'uix' in cell:
             try:
@@ -151,30 +151,32 @@ class MainUi(tky.TkYzwMainUi):
         rows = tb['rows']
         del tb['rows']
         style = tb.get("style", None)
-        table = TkYzwTable(root, **d_style.get(style, {}))
-        d_locals['table'] = table
+        tkytbl = TkYzwTable(root, **d_style.get(style, {}))
+        d_locals['table'] = tkytbl
 
         for a_cell in rows:
-            # a_cell: 一行中的cell列表
+            # a_cell: 一行中的cell单元格列表
             for cell in a_cell:
-                # cell: 单个cell
+                # cell: 单个cell单元格
                 if isinstance(cell, list):
-                    # 这个cell中含有多个widget
-                    ui = tk.Frame(table)
+                    # 这个cell单元格中含有多个widget:
+                    #    [{'f': '{bias.IH02_B}', 'style': 'labelka'},
+                    #     {'f': '{float(biasjz["510330"]):.2f}', 'style': 'labelkas'}]
+                    frame = tk.Frame(tkytbl)
                     uiv = []
                     for wx in cell:
                         # wx: cell中的单个widget
-                        subui, subuiv = self.layout_wx(ui, wx)
-                        subui.pack(side="left", expand=1, fill="both")
+                        subuix, subuiv = self.layout_wx(frame, wx)
+                        subuix.pack(side="left", expand=1, fill="both")
                         uiv.append(subuiv)
                     # 整个cell的选项,比如columnspan,需要加在最后一个wx上
-                    table.add_cell(TkYzwTableCell(ui, uiv), **wx)
+                    tkytbl.add_cell(TkYzwTableCell(frame, uiv), **wx)
                 else:
                     # 这个cell只有单个widget
-                    ui, uiv = self.layout_wx(table, cell)
-                    table.add_cell(TkYzwTableCell(ui, uiv), **cell)
-            table.add_row()
-        return table
+                    frame, uiv = self.layout_wx(tkytbl, cell)
+                    tkytbl.add_cell(TkYzwTableCell(frame, uiv), **cell)
+            tkytbl.add_row()
+        return tkytbl
 
     def on_setting(self):
         dlg = UiSetting(self.root)
@@ -190,14 +192,14 @@ class MainUi(tky.TkYzwMainUi):
             except:
                 print("exec failed: %s" % code)
                 traceback.print_exc()
-        for ui, f, vo in self.a_ui_f:
+        for ui, f, vo in self.a_uix_f:
             try:
                 ui['text'] = eval(f, globals(), d_locals)
             except:
                 print("eval failed: %s" % f)
                 ui['text'] = f
             a_copy.append(ui['text'])
-        for ui, v, vo in self.a_ui_v:
+        for ui, v, vo in self.a_uix_v:
             try:
                 ui['text'] = eval(v, globals(), d_locals)
             except:
@@ -284,26 +286,11 @@ def add_style(name, **d):
     d_style[name] = d
 
 
-def FrRedis(host:str, charset='gb18030', errors='replace', decode_responses=True, socket_timeout=None, socket_connect_timeout=None, **ka):
-    a = host.split(":")
-    host = a[0]
-    if len(a) > 1: ka["port"] = int(a[1])
-    if len(a) > 2: ka['db'] = int(a[2])
-
-    k = frozenset([('host', host),
-         ('charset', charset),
-         ('errors', errors),
-         ('decode_responses', decode_responses),
-         ('socket_timeout', socket_timeout),
-         ('socket_connect_timeout', socket_connect_timeout),
-         ] + list(ka.items()))
-    rd = redis.Redis(host=host, charset=charset, errors=errors, decode_responses=decode_responses,
-                     socket_timeout=socket_timeout, socket_connect_timeout=socket_connect_timeout, **ka)
-
-    return rd
-
-
 if __name__ == '__main__':
+
+    import os, sys
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
     yaml_all = yaml.load(load_textfile(sys.argv[1]), Loader=yaml.FullLoader)
 
     yaml_option = yaml_all.get("option", dict())
