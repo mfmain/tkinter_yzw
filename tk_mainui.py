@@ -198,7 +198,7 @@ class TkYzwMainUiApp:
         #     mainq中idle多长时间触发on_idle
         #     缺省为None，即不启用idle机制，即便重载了self.on_idle，也不会被调用
         # param idle_timers：None or list of float
-        #     如果没有打开enable_idle，会自动打开enable_idle=0.01
+        #     如果没有打开enable_idle，会自动打开enable_idle=0.1
         #     可设置多个定时器，idle_timers=定时器时长列表，单位为秒，浮点数，
         #     该定时器，基于idle的lazy判断，所以不保证实时性，系统没事干的时候才会触发，一直忙则一直不触发，精度依赖enable_idle参数
         #     要实现精确的定时器，可自行构造一个独立的线程发送定时器消息给q
@@ -230,7 +230,7 @@ class TkYzwMainUiApp:
         mainq = self.mainq
 
         if isinstance(idletimers, list) and len(idletimers) > 0:
-            if enable_idle is None: enable_idle = 0.01
+            if enable_idle is None: enable_idle = 0.1
             t = time.time()
             a_timercycle = idletimers
             a_timerlast = [t] * len(idletimers)
@@ -250,7 +250,8 @@ class TkYzwMainUiApp:
 
             try:
                 if btimeout:
-                    self.on_idle()
+                    if enable_idle:
+                        self.on_idle()
 
                     t = time.time()
                     for i, cycle in enumerate(a_timercycle):
@@ -331,6 +332,7 @@ if __name__ == '__main__':
 
             super().__init__(mainui, *la, **ka)
             threading.Thread(target=thproc_demo, args=(), daemon=True).start()
+            self.on_idle_cnt = 0
 
         def on_ui_demo_bind_double1(self, event):
             print(f"on_ui_demo_bind_double1: event={event}")
@@ -341,12 +343,19 @@ if __name__ == '__main__':
         def on_mainq(self, msgtype, *argv):
             print(f"on_mainq {msgtype} {argv}")
 
+        def on_idle(self):
+            self.on_idle_cnt += 1
+            if self.on_idle_cnt % 10 == 0:
+                print("on_idle", self.on_idle_cnt)
+
+    import os, sys
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
     import threading
     import time
 
     mainui = MainUi()
     mainq = mainui.mainq
-    mainapp = MainApp(mainui, timers=[1], tk_after=1000, idle_timers=[0.5, 3])
+    mainapp = MainApp(mainui, timers=[1], tk_after=1000, enable_idle=0.1, idle_timers=[0.5, 3])
     mainapp.run()
     print("bye")
