@@ -33,7 +33,7 @@ def list_get(a:list, i:int, default:any):
 
 
 class TkYzwFrameTree(tk.Frame):
-    treecmd_allow_exec = True  # backtick treecmd runs exec(); MUST be set False when treecmd comes from network (ulogview does it in udp mode)
+    treecmd_allow_exec = True  # backtick treecmd runs exec(); MUST be set False when treecmd comes from network (tlgview does it in udp mode)
     def __init__(self, master, column_list, width_list:list=None, command=None, on_select=None, heading_command=None, scroll="", dnd="", **kw):
         """
         推荐格式: column_list = [("tag", 120), ("desc,w", "100,w+"), ...("抬头列名,抬头列anchor", "列宽,内容行anchor")] 分别对应column=['#0', 'c1', 'c2', ...]  #0是树节点
@@ -472,9 +472,10 @@ class TkYzwFrameTree(tk.Frame):
         """ 允许指定一个顶级rootpath
             rootpath_是rootpath加上目录分隔符/, 这个冗余仅仅是为了性能优化 """
 
-        # t title            # 设置root节点显示的文本
+        # t title            # 设置本来溬eroot节点显示的文本(宿主处理,如tlgview; 注意tag命令是t紧跟路径不带空格)
         # X                  # clear all
         # xaaa/bbb           # deltree aaa/bbb
+        # x.                 # 路径参数里'.'表示本来源根节点(r/R/i/I/x/z/t通用)
 
         # rxxx/yyy msg       # 更改路径xxx/yyy的msg, 如果不存在,则插入
         # Rxxx/yyy msg       # R,r的区别在于r在头部插入,R在尾部插入,其他用法相同
@@ -484,6 +485,7 @@ class TkYzwFrameTree(tk.Frame):
         # ixxx yyy      msg  # 在路径xxx下面插入子节点yyy, 节点上显示的文本为yyy
         # ixxx :text    msg  # 在路径xxx下面插入匿名节点(系统自动提供), 冒号后面为节点上显示的文本
         # ixxx :<ts>    msg  # 在路径xxx下面插入匿名节点(系统自动提供), 节点上显示时间戳
+        # ixxx :<seq>   msg  # 在路径xxx下面插入匿名节点(系统自动提供), 节点上显示自增序号(每个父节点单独计数)
 
         # zxxx/yyy 0         # folder close 取名vim的z功能
         # zxxx/yyy 1         # folder open
@@ -491,28 +493,30 @@ class TkYzwFrameTree(tk.Frame):
 
         # 高级命令:
         # `<exec_source_code>  # 直接调用self.<exec_source_code>
-        # `easy_inert(path, _iid, index=0...)
-        # Note: backtick cmd uses exec(); set tree.treecmd_allow_exec = False to reject untrusted input (ulogview does it in udp mode)
+        # `easy_insert(path, _iid, index=0...)
+        # Note: backtick cmd uses exec(); set tree.treecmd_allow_exec = False to reject untrusted input (tlgview does it in udp mode)
 
         if not cmd: return True
         if rootpath:
             if not rootpath_:
                 rootpath_ = rootpath + '/'
         action, cmda = cmd[0], cmd[1:]
+        if action in 'rRztiI' and not cmda.strip():
+            return False  # bare command without argument: treat as unparsed line, never raise
+
+        def _p(rel):  # '.' means this source's root, otherwise a relative path under rootpath_
+            return rootpath if rel == '.' else rootpath_ + rel
+
 
         if action == 'r':
             # rxxx/yyy msg       # 更改路径xxx/yyy的msg, 如果不存在,则插入
             a = cmda.split(maxsplit=1)  # iid, msg
-            relpath = a[0]
-            if relpath == '.':
-                self.easy_item(rootpath, values=(list_get(a, 1, ""),))
-            else:
-                self.easy_item(rootpath_ + relpath, values=(list_get(a, 1, ""),))
+            self.easy_item(_p(a[0]), values=(list_get(a, 1, ""),))
 
         elif action == 'R':
             # Rxxx/yyy msg       # R,r的区别在于r在头部插入,R在尾部插入,其他用法相同
             a = cmda.split(maxsplit=1)  # iid, msg
-            self.easy_item(rootpath_ + a[0], index="end", values=(list_get(a, 1, ""),))
+            self.easy_item(_p(a[0]), index="end", values=(list_get(a, 1, ""),))
 
         elif action == 'z':
             # fold
@@ -521,17 +525,19 @@ class TkYzwFrameTree(tk.Frame):
                 bopen = ast.literal_eval(a[1])
             except Exception:
                 bopen = True
-            self.easy_item(rootpath_ + a[0], open=bopen)
+            self.easy_item(_p(a[0]), open=bopen)
 
         elif action == 't':
-            # tag
+            # tag; 't title'(t后带空格)是标题命令, 返回False交给宿主(见tlgview on_timer)
+            if cmda[:1] == ' ' or not cmda.strip():
+                return False
             a = cmda.split()  # iid, tags...
             tag=a[1:]
-            self.easy_item(rootpath_ + a[0], tags=tag)
+            self.easy_item(_p(a[0]), tags=tag)
 
         elif action == 'i':
             a = cmda.split(maxsplit=2)  # iid_parent iid_new:text msg
-            iid_parent = rootpath_ + a[0] if a[0] != '.' else rootpath
+            iid_parent = _p(a[0])
             iid_text = list_get(a, 1, "").split(":")
             _iid = list_get(iid_text, 0, "")
             text = list_get(iid_text, 1, "")
@@ -542,7 +548,7 @@ class TkYzwFrameTree(tk.Frame):
             self.easy_insert(iid_parent, index=0, _iid=_iid, text=text, values=values)
         elif action == 'I':
             a = cmda.split(maxsplit=2)  # iid_parent iid_new:text msg
-            iid_parent = rootpath_ + a[0] if a[0] != '.' else rootpath
+            iid_parent = _p(a[0])
             iid_text = list_get(a, 1, "").split(":")
             _iid = list_get(iid_text, 0, "")
             text = list_get(iid_text, 1, "")
@@ -568,7 +574,7 @@ class TkYzwFrameTree(tk.Frame):
                 return True
             try:
                 # bare exec on purpose: cmds run in THIS frame and may use rootpath/rootpath_,
-                # e.g. ulogview_sample.log: `easy_item(rootpath_+"Usage", tags=["h1","blue"])
+                # e.g. tlgview_sample.tlg: `easy_item(rootpath_+"Usage", tags=["h1","blue"])
                 exec("self." + cmda)
             except Exception:
                 print("treecmd exec failed:", cmda)

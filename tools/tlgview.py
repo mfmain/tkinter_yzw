@@ -1,8 +1,8 @@
 # coding: gbk
 
-# py3xcli & C:\Python313\Scripts\pyinstaller -F -w --exclude numpy ulogview.py & copy dist\ulogview.exe d:\s\bin /y
-# py3xcli & C:\Python313\Scripts\pyinstaller -F    --exclude numpy ulogview.py & copy dist\ulogview.exe d:\s\bin\ulogview_cons.exe /y
-# DEBUG_ARG: -f ulogview_sample.log -l d:\^\ulogview.log
+# py3xcli & C:\Python313\Scripts\pyinstaller -F -w --exclude numpy tlgview.py & copy dist\tlgview.exe d:\s\bin /y
+# py3xcli & C:\Python313\Scripts\pyinstaller -F    --exclude numpy tlgview.py & copy dist\tlgview.exe d:\s\bin\tlgview_cons.exe /y
+# DEBUG_ARG: -f tlgview_sample.tlg -l d:\^\tlgview.log
 #            -f D:\tx\src\frpy\py\robot_rmf_7808.log
 #            -u 17878 缺省
 
@@ -14,6 +14,7 @@ import queue
 import socket
 import threading
 import argparse
+import traceback
 import tkinter as tk
 # ensure the workspace package (not a site-packages copy) is used when running this file directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
@@ -150,7 +151,7 @@ class ThreadInputUdp(threading.Thread):
 
 
 class MainUi:
-    def __init__(self, title="ulogview"):
+    def __init__(self, title="tlgview"):
         self.root = tk.Tk()
         self.root.title(title)
         self.root.geometry('800x800+200+200') # yscroll=True时需要设，否则窗口很小
@@ -259,16 +260,21 @@ class MainUi:
         n = 0
         for addr, x in q_nonblock_polling(g.q):
             n += 1
-            rootpath, rootpath_ = g.root_path_get(addr)
-            if self.ui_tree.treecmd(x, rootpath, rootpath_):
-                if n >= drain_max: break
-                continue
-            action, x_ = x[0], x[1:]
-            if action == 't':
-                # title for rootpath
-                g.d_addr_rootpath[addr] = (x_, x_ + '/')
-            else:
-                pass
+            try:
+                rootpath, rootpath_ = g.root_path_get(addr)
+                if self.ui_tree.treecmd(x, rootpath, rootpath_):
+                    if n >= drain_max: break
+                    continue  # recognized protocol line
+                action, x_ = x[0], x[1:]
+                if action == 't' and x_[:1] == ' ':
+                    # title command (treecmd left it to us): rename THIS source's root
+                    title = x_.strip()
+                    if title:
+                        g.d_addr_rootpath[addr] = (title, title + '/')
+                # unparsed lines: ignored (host may extend here)
+            except Exception:
+                print("on_timer: line failed, ignored:", x)
+                traceback.print_exc()
             if n >= drain_max: break
 
         if n >= drain_max:
@@ -323,7 +329,7 @@ class _DebugmeSplitLines:
 
 def _getopt():
     argv = sys.argv[1:]
-    parser = argparse.ArgumentParser(description='ulogview')
+    parser = argparse.ArgumentParser(description='tlgview')
     parser.add_argument('av', type=str, default="", nargs='*', help='redis host for config')
     parser.add_argument('-f', '--file', type=str, default="", help='load from logfile')
     parser.add_argument('-u', '--udp', type=int, default=17878, help='listen on udp port')
@@ -351,7 +357,7 @@ if len(sysarg.av) > 0:
 
 elif sysarg.file:
     # D:\tx\src\frpy\py\robot_rmf_7808.log
-    # ulogview_sample.log
+    # tlgview_sample.tlg
     ThreadInputFile(g.q, fn=sysarg.file, encoding=sysarg.source_encoding).start()
     mainui = MainUi(title=sysarg.file)
 

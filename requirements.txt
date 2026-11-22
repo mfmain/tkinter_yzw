@@ -2,7 +2,7 @@
 # package itself
 sortedcontainers
 pywin32
-# tools/ (ulogview, tableview, newpp)
+# tools/ (tlgview, tableview, newpp)
 PyYAML
 redis
 exifread
