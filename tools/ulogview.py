@@ -253,18 +253,26 @@ class MainUi:
             search_button.pack(side="top")
             wx_what_entry.focus_set()
 
-    def on_timer(self):
+    def on_timer(self, drain_max=2000):
+        n = 0
         for addr, x in q_nonblock_polling(g.q):
+            n += 1
             rootpath, rootpath_ = g.root_path_get(addr)
-            if self.ui_tree.treecmd(x, rootpath, rootpath_): continue
+            if self.ui_tree.treecmd(x, rootpath, rootpath_):
+                if n >= drain_max: break
+                continue
             action, x_ = x[0], x[1:]
             if action == 't':
                 # title for rootpath
                 g.d_addr_rootpath[addr] = (x_, x_ + '/')
             else:
                 pass
+            if n >= drain_max: break
 
-        self.root.after(100, self.on_timer)
+        if n >= drain_max:
+            self.root.after(1, self.on_timer)  # backlog left: resume soon, keep UI responsive
+        else:
+            self.root.after(100, self.on_timer)
 
 
 class _DebugmeSplitLines:
