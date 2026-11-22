@@ -1,0 +1,8 @@
+# tkinter_yzw runtime dependencies
+# package itself
+sortedcontainers
+pywin32
+# tools/ (ulogview, tableview, newpp)
+PyYAML
+redis
+exifread
