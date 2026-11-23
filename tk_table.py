@@ -71,7 +71,8 @@ class TkYzwTable(tk.Frame):
     def cell_hide(self, cellkey):
         cell = self.d_cellkey_cell.get(cellkey, None)
         if cell is None: return
-        cell.uix.grid_forget()  # ['state'] = 'disabled'
+        # cell.uix.grid_forget()  # ['state'] = 'disabled'
+        cell.uix.grid_remove()  # grid_remove比grid_forget多记住了row/column/sticky/padx/pady配置, 恢复时可以不带参数裸调.grid()
         cell.uix = tk.Label(self, text="")
         cell.uix.grid(row=cell.rowi, column=cell.coli, **cell.gridopt)
 
