@@ -633,7 +633,7 @@ if __name__ == '__main__':
     class Ui:  # 把UI相关的控件及其变量都封装在一起
         def __init__(self):
             self.root = tk.Tk()
-            self.root.title("tk_listview demo")
+            self.root.title("tk_tree demo")
             self.root.geometry('800x500+200+200') # yscroll=True时需要设，否则窗口很小
             fr = tk.Frame(self.root)
             self.uiv_iid = tk.IntVar(value=1)

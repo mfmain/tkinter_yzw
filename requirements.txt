@@ -1,8 +1,8 @@
 # tkinter_yzw runtime dependencies
-# package itself
+# package itself (tk_tree, tk_mainui)
 sortedcontainers
-pywin32
-# tools/ (tlgview, tableview, newpp)
 PyYAML
+# tools/ (tlgview, tableview, newpp)
+pywin32
 redis
 exifread
