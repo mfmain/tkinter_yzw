@@ -10,3 +10,5 @@ build/
 *.csv
 *_layout*.yaml
 .vscode/
+dist/
+*.egg-info/
